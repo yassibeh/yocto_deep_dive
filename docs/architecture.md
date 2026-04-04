@@ -17,6 +17,7 @@ Objective:
 
 Properties:
 - uses official ST manifest
+- non-interactive ST EULA acceptance is supported for CI
 - no private signing keys in CI
 - runs directly on a controlled host
 - archives outputs for inspection

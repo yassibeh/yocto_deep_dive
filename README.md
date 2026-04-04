@@ -9,6 +9,7 @@ Current target:
 - Image: `core-image-minimal`
 - Host: Ubuntu, no Docker
 - CI: Jenkins pipeline from SCM
+- ST EULA: auto-accepted by default for non-interactive CI builds
 
 ## Purpose
 
@@ -60,6 +61,7 @@ Known integration notes:
 - the generated ST default `bblayers.conf` template does not enable all required `meta-openembedded` dependency layers for this setup, so the wrapper patches in `meta-oe` and `meta-python` automatically
 - the valid machine identifier in the ST manifest is `stm32mp13-disco`; `stm32mp135f-dk` is the board name, not the Yocto `MACHINE` value used by this release
 - if an existing build directory contains a mismatched previous `DISTRO` or `MACHINE`, the wrapper archives it automatically and recreates a clean ST build directory for the requested target
+- for CI use, the wrapper can export `ACCEPT_EULA_<MACHINE>=1` automatically so the ST setup does not stop on an interactive EULA prompt
 
 ## Quick start
 
@@ -112,6 +114,7 @@ Important variables:
 - `YOCTO_IMAGE`
 - `DL_DIR`
 - `SSTATE_DIR`
+- `ST_AUTO_ACCEPT_EULA`
 
 ## Build output
 
@@ -141,6 +144,26 @@ Current pipeline stages:
 - Environment validation
 - Build
 - Archive outputs
+
+## ST EULA handling
+
+For non-interactive CI runs, the wrapper exports the ST-supported variable:
+
+```bash
+ACCEPT_EULA_stm32mp13-disco=1
+```
+
+This is enabled by default through:
+
+```bash
+ST_AUTO_ACCEPT_EULA=1
+```
+
+To disable automatic acceptance and use the upstream interactive flow instead:
+
+```bash
+export ST_AUTO_ACCEPT_EULA=0
+```
 
 ## Security note
 
