@@ -15,6 +15,9 @@ fi
 cd "${MANIFEST_DIR}"
 
 log "Preparing OpenSTLinux environment"
+TARGET_DISTRO="${DISTRO}"
+TARGET_MACHINE="${MACHINE}"
+TARGET_IMAGE="${YOCTO_IMAGE}"
 export DISTRO MACHINE BB_NUMBER_THREADS PARALLEL_MAKE FORCE_DL_CACHEPREFIX FORCE_SSTATE_CACHEPREFIX
 set +u
 # shellcheck disable=SC1091
@@ -34,7 +37,7 @@ append_if_missing() {
 append_if_missing "BB_NUMBER_THREADS = \"${BB_NUMBER_THREADS}\"" "${BUILDDIR}/conf/local.conf"
 append_if_missing "PARALLEL_MAKE = \"${PARALLEL_MAKE}\"" "${BUILDDIR}/conf/local.conf"
 
-log "Starting bitbake ${YOCTO_IMAGE} for ${MACHINE}"
-bitbake "${YOCTO_IMAGE}"
+log "Starting bitbake ${TARGET_IMAGE} for ${TARGET_MACHINE}"
+bitbake "${TARGET_IMAGE}"
 
 log "Build finished"
