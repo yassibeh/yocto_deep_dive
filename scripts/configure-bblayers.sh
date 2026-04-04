@@ -12,6 +12,25 @@ if [ ! -f "${BBLAYERS_CONF}" ]; then
     exit 1
 fi
 
+# Drop any previously appended absolute-path overrides to keep the file portable
+# and avoid duplicated layer collections.
+python3 - "$BBLAYERS_CONF" <<'PY'
+import sys
+from pathlib import Path
+
+conf_path = Path(sys.argv[1])
+lines = conf_path.read_text().splitlines()
+filtered = []
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith('BBLAYERS =+') and 'meta-openembedded/meta-oe' in stripped:
+        continue
+    if stripped.startswith('BBLAYERS =+') and 'meta-openembedded/meta-python' in stripped:
+        continue
+    filtered.append(line)
+conf_path.write_text('\n'.join(filtered) + '\n')
+PY
+
 append_layer_if_missing() {
     local layer_path="$1"
 
