@@ -14,6 +14,8 @@ fi
 
 cd "${MANIFEST_DIR}"
 
+"${SCRIPT_DIR}/prepare-build-dir.sh"
+
 log "Preparing OpenSTLinux environment"
 TARGET_DISTRO="${DISTRO}"
 TARGET_MACHINE="${MACHINE}"
