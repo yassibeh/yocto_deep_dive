@@ -6,28 +6,32 @@ TARGET_GID="${LOCAL_GID:-1000}"
 TARGET_USER="${LOCAL_USER:-builder}"
 TARGET_GROUP="${LOCAL_GROUP:-builder}"
 WORKSPACE_DIR="${WORKSPACE_DIR:-/workspace}"
+RUNTIME_USER="builder"
+RUNTIME_GROUP="builder"
 
-existing_group_name="$(getent group "${TARGET_GID}" | cut -d: -f1 || true)"
-if [ -z "${existing_group_name}" ]; then
-    groupmod -n "${TARGET_GROUP}" builder 2>/dev/null || groupadd -g "${TARGET_GID}" "${TARGET_GROUP}"
+if ! getent group "${TARGET_GID}" >/dev/null 2>&1; then
+    groupmod -g "${TARGET_GID}" "${RUNTIME_GROUP}"
 else
-    TARGET_GROUP="${existing_group_name}"
+    RUNTIME_GROUP="$(getent group "${TARGET_GID}" | cut -d: -f1)"
 fi
 
-if id -u "${TARGET_USER}" >/dev/null 2>&1; then
-    usermod -u "${TARGET_UID}" -g "${TARGET_GID}" "${TARGET_USER}" 2>/dev/null || true
-else
-    useradd -m -u "${TARGET_UID}" -g "${TARGET_GID}" -s /bin/bash "${TARGET_USER}" 2>/dev/null || true
+if [ "${RUNTIME_GROUP}" != "builder" ]; then
+    usermod -g "${TARGET_GID}" "${RUNTIME_USER}"
 fi
 
-mkdir -p "${WORKSPACE_DIR}"
-chown -R "${TARGET_UID}:${TARGET_GID}" "/home/${TARGET_USER}" "${WORKSPACE_DIR}" 2>/dev/null || true
+usermod -u "${TARGET_UID}" "${RUNTIME_USER}"
+usermod -d "/home/${RUNTIME_USER}" -m "${RUNTIME_USER}" >/dev/null 2>&1 || true
 
-export HOME="/home/${TARGET_USER}"
+mkdir -p "${WORKSPACE_DIR}" "/home/${RUNTIME_USER}"
+chown -R "${TARGET_UID}:${TARGET_GID}" "/home/${RUNTIME_USER}" "${WORKSPACE_DIR}" 2>/dev/null || true
+
+export HOME="/home/${RUNTIME_USER}"
+export USER="${TARGET_USER}"
+export LOGNAME="${TARGET_USER}"
 cd "${WORKSPACE_DIR}"
 
 if [ "$#" -eq 0 ]; then
-    exec su -s /bin/bash "${TARGET_USER}"
+    exec su -s /bin/bash "${RUNTIME_USER}"
 fi
 
-exec su -s /bin/bash "${TARGET_USER}" -c "$*"
+exec su -s /bin/bash "${RUNTIME_USER}" -c "$*"

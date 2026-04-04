@@ -15,6 +15,25 @@ Validated target for this branch:
 ./scripts/install-host-deps-container-ubuntu.sh
 ```
 
+If Docker access is granted by adding your user to the `docker` group, refresh the current shell before continuing.
+
+Recommended command:
+
+```bash
+exec sg docker newgrp
+```
+
+Then verify:
+
+```bash
+id
+docker version
+```
+
+Continue only when:
+- `id` shows the `docker` group
+- `docker version` shows both Client and Server
+
 ## 2. Build the local container image
 
 ```bash

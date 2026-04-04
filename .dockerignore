@@ -1,0 +1,10 @@
+.git
+.gitignore
+sources
+build
+out
+.yocto-cache
+cache
+*.bak-*
+**/tmp
+**/*.sock
