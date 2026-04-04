@@ -1,0 +1,56 @@
+# Architecture
+
+## Scope
+
+This repository automates a first Yocto build for:
+- board: `stm32mp135f-dk`
+- image: `core-image-minimal`
+- base distribution: ST OpenSTLinux from the official `oe-manifest`
+- execution model: local Ubuntu host, no Docker
+
+## Phase plan
+
+### Phase 1: unsigned autobuild
+
+Objective:
+- prove that checkout, environment setup, bitbake build, and artifact collection are stable
+
+Properties:
+- uses official ST manifest
+- no private signing keys in CI
+- runs directly on a controlled host
+- archives outputs for inspection
+
+### Phase 2: reproducibility and maintenance
+
+Add:
+- host dependency documentation
+- persistent download and sstate caches
+- build retention policy
+- branch/tag policies
+- optional nightly job
+
+### Phase 3: release and signing
+
+Add:
+- separate release job
+- manual approval gate
+- restricted signing node or HSM-backed signing
+- immutable release artifact publication
+
+## Directory intent
+
+- `sources/` : repo-managed ST Yocto sources
+- `build/` : active OpenEmbedded build directory
+- `${PROJECT_ROOT}/.yocto-cache/downloads/` : shared Yocto source downloads cache
+- `${PROJECT_ROOT}/.yocto-cache/sstate-cache/` : shared Yocto shared-state cache
+- `out/` : copied outputs intended for CI archival
+
+## Security model
+
+Phase 1 explicitly excludes private secure-boot material from the autobuild path.
+
+Rationale:
+- avoid leaking keys into generic build logs, workspaces, or agents
+- keep unsigned build validation independent from release-signing design
+- introduce key handling only after build automation is proven stable

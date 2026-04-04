@@ -1,0 +1,105 @@
+pipeline {
+    agent { label 'yocto-linux' }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        durabilityHint('MAX_SURVIVABILITY')
+        buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
+        skipDefaultCheckout(true)
+    }
+
+    triggers {
+        pollSCM('@daily')
+    }
+
+    parameters {
+        booleanParam(name: 'RUN_BUILD', defaultValue: true, description: 'Run the Yocto build stage')
+        booleanParam(name: 'ARCHIVE_OUTPUTS', defaultValue: true, description: 'Archive out/ artifacts at the end')
+    }
+
+    environment {
+        LC_ALL = 'C.UTF-8'
+        LANG = 'C.UTF-8'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                sh 'git status --short || true'
+                sh 'git log -1 --oneline'
+            }
+        }
+
+        stage('Host validation') {
+            parallel {
+                stage('Tooling') {
+                    steps {
+                        sh './scripts/check-host-deps.sh'
+                    }
+                }
+                stage('Config') {
+                    steps {
+                        sh 'test -f config/build.env'
+                        sh 'test -f jenkins/Jenkinsfile'
+                    }
+                }
+            }
+        }
+
+        stage('Source bootstrap') {
+            steps {
+                sh './scripts/bootstrap-manifest.sh'
+            }
+        }
+
+        stage('Environment validation') {
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+                    source ./config/build.env
+                    cd "$MANIFEST_DIR"
+                    export DISTRO MACHINE FORCE_DL_CACHEPREFIX FORCE_SSTATE_CACHEPREFIX
+                    source layers/meta-st/scripts/envsetup.sh "$BUILD_DIR_NAME" >/dev/null
+                    ../scripts/configure-cache-paths.sh
+                    test -f "$BUILDDIR/conf/local.conf"
+                    test -f "$BUILDDIR/conf/bblayers.conf"
+                    test -f "$BUILDDIR/conf/site.conf"
+                    grep -F "${DL_DIR}" "$BUILDDIR/conf/site.conf"
+                    grep -F "${SSTATE_DIR}" "$BUILDDIR/conf/site.conf"
+                '''
+            }
+        }
+
+        stage('Build') {
+            when {
+                expression { return params.RUN_BUILD }
+            }
+            steps {
+                sh './scripts/build.sh'
+            }
+        }
+
+        stage('Archive outputs') {
+            when {
+                expression { return params.ARCHIVE_OUTPUTS }
+            }
+            steps {
+                sh './scripts/archive-artifacts.sh'
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'out/**/*', fingerprint: true, allowEmptyArchive: true
+        }
+        success {
+            echo 'Pipeline completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Inspect console output and archived artifacts.'
+        }
+    }
+}
