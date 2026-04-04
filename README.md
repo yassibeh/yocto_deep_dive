@@ -36,6 +36,13 @@ This project reuses the existing shared cache on the host:
 
 This reduces rebuild time and avoids duplicating downloads between workspaces.
 
+## Current validation status
+
+Validated on the current Ubuntu host:
+- required host tools present
+- official ST manifest bootstrap successful
+- OpenSTLinux environment initialization successful
+
 ## Quick start
 
 ### 1. Go to the project directory
