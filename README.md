@@ -22,6 +22,7 @@ This repository provides a clean starting point to:
 ## Repository structure
 
 - `config/build.env` : build parameters
+- `scripts/install-host-deps-ubuntu.sh` : install required Ubuntu host packages
 - `scripts/bootstrap-manifest.sh` : initialize and sync ST sources
 - `scripts/build.sh` : configure environment and run BitBake
 - `scripts/archive-artifacts.sh` : copy useful outputs to `out/`
@@ -68,25 +69,33 @@ Known integration notes:
 cd /path/to/yocto_deep_dive
 ```
 
-### 2. Check host tools
+### 2. Install Ubuntu host dependencies
+
+```bash
+./scripts/install-host-deps-ubuntu.sh
+```
+
+This script installs the host packages required by the ST OpenSTLinux environment on Ubuntu.
+
+### 3. Check host tools
 
 ```bash
 ./scripts/check-host-deps.sh
 ```
 
-### 3. Fetch and sync the ST manifest
+### 4. Fetch and sync the ST manifest
 
 ```bash
 ./scripts/bootstrap-manifest.sh
 ```
 
-### 4. Run the build
+### 5. Run the build
 
 ```bash
 ./scripts/build.sh
 ```
 
-### 5. Archive build outputs
+### 6. Archive build outputs
 
 ```bash
 ./scripts/archive-artifacts.sh
