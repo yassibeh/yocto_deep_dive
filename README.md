@@ -23,7 +23,8 @@ This repository provides a clean starting point to:
 ## Repository structure
 
 - `config/build.env` : build parameters
-- `scripts/install-host-deps-ubuntu.sh` : install required Ubuntu host packages
+- `scripts/install-host-deps-ubuntu.sh` : install required Ubuntu host packages for local builds
+- `scripts/setup-jenkins-local-ubuntu.sh` : bootstrap a local Ubuntu Jenkins host for this project
 - `scripts/bootstrap-manifest.sh` : initialize and sync ST sources
 - `scripts/build.sh` : configure environment and run BitBake
 - `scripts/archive-artifacts.sh` : copy useful outputs to `out/`
@@ -65,13 +66,15 @@ Known integration notes:
 
 ## Quick start
 
-### 1. Go to the project directory
+### Path A: local command-line build
+
+#### 1. Go to the project directory
 
 ```bash
 cd /path/to/yocto_deep_dive
 ```
 
-### 2. Install Ubuntu host dependencies
+#### 2. Install Ubuntu host dependencies
 
 ```bash
 ./scripts/install-host-deps-ubuntu.sh
@@ -79,29 +82,139 @@ cd /path/to/yocto_deep_dive
 
 This script installs the host packages required by the ST OpenSTLinux environment on Ubuntu.
 
-### 3. Check host tools
+#### 3. Check host tools
 
 ```bash
 ./scripts/check-host-deps.sh
 ```
 
-### 4. Fetch and sync the ST manifest
+#### 4. Fetch and sync the ST manifest
 
 ```bash
 ./scripts/bootstrap-manifest.sh
 ```
 
-### 5. Run the build
+#### 5. Run the build
 
 ```bash
 ./scripts/build.sh
 ```
 
-### 6. Archive build outputs
+#### 6. Archive build outputs
 
 ```bash
 ./scripts/archive-artifacts.sh
 ```
+
+### Path B: local Jenkins build on Ubuntu
+
+This repository is designed so a developer can clone it, read this README, prepare a local Jenkins host, create one Pipeline job from SCM, and run the build without editing tracked files.
+
+#### 1. Clone the repository
+
+```bash
+git clone <repo-url>
+cd yocto_deep_dive
+```
+
+#### 2. Bootstrap the local Jenkins host
+
+Choose a shared cache location on your machine, then run:
+
+```bash
+./scripts/setup-jenkins-local-ubuntu.sh \
+    --shared-cache-root /absolute/path/to/shared-yocto-cache
+```
+
+Example:
+
+```bash
+./scripts/setup-jenkins-local-ubuntu.sh \
+    --shared-cache-root /srv/yocto-cache/shared
+```
+
+This script:
+- installs Jenkins and required host packages
+- enables and starts `jenkins.service`
+- prepares reusable Yocto `downloads/` and `sstate-cache/`
+- grants Jenkins access to the shared cache
+- configures Jenkins Git trust for shared `downloads/git2` mirrors
+- prints the exact remaining Jenkins UI configuration
+
+#### 3. Open Jenkins
+
+Default local URL:
+
+```text
+http://127.0.0.1:8080
+```
+
+#### 4. Label the node
+
+For the built-in local node, add the label:
+
+```text
+yocto-linux
+```
+
+#### 5. Create the Pipeline job
+
+Create a Jenkins Pipeline job with:
+- job type: `Pipeline`
+- definition: `Pipeline script from SCM`
+- SCM: `Git`
+- repository URL: this repository
+- branch: your target branch
+- script path: `jenkins/Jenkinsfile`
+
+Example branch during bring-up:
+
+```text
+*/feature/yocto-autobuild-stm32mp135f-dk
+```
+
+#### 6. Configure cache environment variables in Jenkins
+
+Set these either globally in Jenkins or at the job level:
+
+```text
+SHARED_CACHE_ROOT=/absolute/path/to/shared-yocto-cache
+DL_DIR=/absolute/path/to/shared-yocto-cache/downloads
+SSTATE_DIR=/absolute/path/to/shared-yocto-cache/sstate-cache
+FORCE_DL_CACHEPREFIX=/absolute/path/to/shared-yocto-cache
+FORCE_SSTATE_CACHEPREFIX=/absolute/path/to/shared-yocto-cache
+```
+
+Example:
+
+```text
+SHARED_CACHE_ROOT=/srv/yocto-cache/shared
+DL_DIR=/srv/yocto-cache/shared/downloads
+SSTATE_DIR=/srv/yocto-cache/shared/sstate-cache
+FORCE_DL_CACHEPREFIX=/srv/yocto-cache/shared
+FORCE_SSTATE_CACHEPREFIX=/srv/yocto-cache/shared
+```
+
+#### 7. Run the Jenkins job
+
+Recommended parameters:
+- `RUN_BUILD = true`
+- `ARCHIVE_OUTPUTS = true`
+
+#### 8. Expected success criteria
+
+A successful Jenkins run should show:
+- manifest bootstrap succeeds
+- shared cache paths are printed
+- `Prepare shared cache access` stage runs
+- BitBake completes successfully
+- artifacts are copied to `out/<timestamp>/`
+- final status is `SUCCESS`
+
+Validated reference result on the current local Ubuntu/Jenkins bring-up:
+- full `core-image-minimal` Jenkins build succeeded
+- `6456` tasks completed successfully
+- artifacts were archived from the Jenkins workspace
 
 ## Main configuration file
 
@@ -149,10 +262,11 @@ Current pipeline stages:
 - Build
 - Archive outputs
 
-Jenkins validation note:
+Jenkins implementation notes:
 - the Environment validation stage mirrors the shell wrapper behavior, including ST EULA bypass handling, temporary `nounset` disable during `envsetup.sh`, and `bblayers.conf` normalization
 - Jenkins can override cache locations through job-level environment variables without hardcoding machine-specific paths into the repository
-- the pipeline now self-configures Git `safe.directory` for the Jenkins user before the build so shared Yocto `downloads/git2` mirrors can be reused without repeated manual operator fixes on this local Jenkins machine
+- the pipeline self-configures Git `safe.directory` for the Jenkins user before the build so shared Yocto `downloads/git2` mirrors can be reused without repeated manual operator fixes on a local single-user Jenkins machine
+- the Jenkinsfile intentionally does not enable SCM polling during bring-up; prefer manual runs now, then move to a webhook or explicit nightly schedule later
 
 ## ST EULA handling
 

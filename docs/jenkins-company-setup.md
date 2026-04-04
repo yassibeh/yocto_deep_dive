@@ -7,6 +7,7 @@ Provide a professional first implementation where:
 - the pipeline is readable in Jenkins stage view
 - source bootstrap, environment validation, build, and archival are separated clearly
 - secure-boot private keys are not yet exposed to CI
+- a new developer can reproduce the setup from the repository README and helper scripts without relying on undocumented operator memory
 
 ## Recommended Jenkins model
 
@@ -19,6 +20,11 @@ Configure one Jenkins job as:
 - script path: `jenkins/Jenkinsfile`
 
 This gives versioned CI logic and proper stage visualization.
+
+For a local Ubuntu laptop/workstation bring-up, use the repository helper:
+- `scripts/setup-jenkins-local-ubuntu.sh`
+
+That script prepares the host, Jenkins service, shared cache permissions, and Jenkins Git trust. The remaining job creation stays explicit in the Jenkins UI so the repository remains portable across machines and organizations.
 
 ### 2. Agent model
 
