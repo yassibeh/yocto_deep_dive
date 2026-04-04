@@ -25,6 +25,7 @@ source layers/meta-st/scripts/envsetup.sh "${BUILD_DIR_NAME}" >/dev/null
 set -u
 
 "${SCRIPT_DIR}/configure-cache-paths.sh"
+"${SCRIPT_DIR}/configure-bblayers.sh"
 
 require_cmd bitbake
 
