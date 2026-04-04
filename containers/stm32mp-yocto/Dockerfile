@@ -1,8 +1,9 @@
-FROM ubuntu:24.04
+ARG BASE_IMAGE=ubuntu:24.04
+FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV LANG=C.UTF-8
-ENV LC_ALL=C.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
@@ -24,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsdl1.2-dev \
     libssl-dev \
     libusb-1.0-0 \
+    locales \
     lz4 \
     python3 \
     python3-git \
@@ -40,6 +42,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xterm \
     xz-utils \
     zstd \
+ && locale-gen en_US.UTF-8 \
+ && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
  && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash builder
