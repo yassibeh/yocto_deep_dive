@@ -145,12 +145,14 @@ Current pipeline stages:
 - Host validation
 - Source bootstrap
 - Environment validation
+- Prepare shared cache access
 - Build
 - Archive outputs
 
 Jenkins validation note:
 - the Environment validation stage mirrors the shell wrapper behavior, including ST EULA bypass handling, temporary `nounset` disable during `envsetup.sh`, and `bblayers.conf` normalization
 - Jenkins can override cache locations through job-level environment variables without hardcoding machine-specific paths into the repository
+- the pipeline now self-configures Git `safe.directory` for the Jenkins user before the build so shared Yocto `downloads/git2` mirrors can be reused without repeated manual operator fixes on this local Jenkins machine
 
 ## ST EULA handling
 

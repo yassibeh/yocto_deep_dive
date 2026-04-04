@@ -9,9 +9,8 @@ pipeline {
         skipDefaultCheckout(true)
     }
 
-    triggers {
-        pollSCM('@daily')
-    }
+    // Intentionally no SCM polling here.
+    // Preferred model: manual bring-up now, webhook or scheduled Jenkins trigger later.
 
     parameters {
         booleanParam(name: 'RUN_BUILD', defaultValue: true, description: 'Run the Yocto build stage')
@@ -77,6 +76,19 @@ pipeline {
                     test -f "$BUILDDIR/conf/site.conf"
                     grep -F "${DL_DIR}" "$BUILDDIR/conf/site.conf"
                     grep -F "${SSTATE_DIR}" "$BUILDDIR/conf/site.conf"
+                '''
+            }
+        }
+
+        stage('Prepare shared cache access') {
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+                    source ./config/build.env
+                    echo "Preparing Git trust for shared Yocto cache"
+                    git config --global --replace-all safe.directory '*'
+                    git config --global --get-all safe.directory || true
+                    mkdir -p "$DL_DIR" "$SSTATE_DIR"
                 '''
             }
         }

@@ -26,6 +26,7 @@ For now:
 - one dedicated Linux agent label: `yocto-linux`
 - runs directly on the PC or on a controlled build node
 - persistent shared cache paths reused across builds
+- for this local single-user Jenkins machine, the pipeline self-configures Git `safe.directory='*'` before build execution so BitBake can safely reuse shared `downloads/git2` mirrors without manual intervention
 
 ### 3. Per-commit validation
 
@@ -62,6 +63,10 @@ That is already a clean professional first shape.
 - separate quick-check vs full-build jobs
 - log retention and artifact retention tuning
 - automatic naming/version stamping
+
+Note:
+- SCM polling is intentionally not enabled in the repository Jenkinsfile during bring-up
+- use manual runs now, then switch to an explicit nightly Jenkins trigger or SCM webhook after stabilization
 
 ### Release quality
 - signed release pipeline separate from development CI
