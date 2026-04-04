@@ -8,10 +8,6 @@ source "${SCRIPT_DIR}/common.sh"
 IMAGE_NAME="${IMAGE_NAME:-stm32mp-yocto-toolbox}"
 IMAGE_TAG="${IMAGE_TAG:-local}"
 CONTAINER_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
-LOCAL_UID="${LOCAL_UID:-$(id -u)}"
-LOCAL_GID="${LOCAL_GID:-$(id -g)}"
-LOCAL_USER="${LOCAL_USER:-$(id -un)}"
-LOCAL_GROUP="${LOCAL_GROUP:-$(id -gn)}"
 WORKSPACE_DIR="/workspace"
 
 COMMAND="${*:-./scripts/build.sh}"
@@ -23,10 +19,6 @@ mkdir -p "${DL_DIR}" "${SSTATE_DIR}" "${OUT_DIR}"
 log "Running containerized build with image ${CONTAINER_IMAGE}"
 
 docker run --rm -t \
-    -e LOCAL_UID="${LOCAL_UID}" \
-    -e LOCAL_GID="${LOCAL_GID}" \
-    -e LOCAL_USER="${LOCAL_USER}" \
-    -e LOCAL_GROUP="${LOCAL_GROUP}" \
     -e WORKSPACE_DIR="${WORKSPACE_DIR}" \
     -e SHARED_CACHE_ROOT="${SHARED_CACHE_ROOT}" \
     -e DL_DIR="${DL_DIR}" \

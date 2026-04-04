@@ -53,6 +53,7 @@ stm32mp-yocto-toolbox:local
 ```
 
 This mounts the repository workspace and the configured Yocto cache directories into the container and runs the repository build wrapper inside the container.
+The container uses a stable internal build user instead of mirroring the host login name.
 
 ## 4. Override cache paths if needed
 
@@ -74,6 +75,15 @@ Examples:
 ```bash
 ./scripts/run-container-build.sh ./scripts/bootstrap-manifest.sh
 ./scripts/run-container-build.sh ./scripts/archive-artifacts.sh
+```
+
+Manual interactive shell example:
+
+```bash
+docker run --rm -it \
+  -e WORKSPACE_DIR=/workspace \
+  -v "$(pwd)":/workspace \
+  stm32mp-yocto-toolbox:local
 ```
 
 ## Notes

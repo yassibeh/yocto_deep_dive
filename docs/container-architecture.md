@@ -44,7 +44,7 @@ This means:
 2. Keep machine-specific paths outside tracked configuration.
 3. Keep private signing keys outside the image and outside the repository.
 4. Use bind-mounted persistent directories for source downloads, sstate cache, and artifacts.
-5. Prefer non-root build execution inside the container when practical.
+5. Use a stable container build identity instead of mirroring the host login name inside the image.
 6. Reuse proven container patterns instead of inventing a completely custom Yocto flow.
 
 ## Existing external references
