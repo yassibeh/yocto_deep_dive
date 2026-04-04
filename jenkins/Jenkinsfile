@@ -59,12 +59,14 @@ pipeline {
                 sh '''#!/usr/bin/env bash
                     set -euo pipefail
                     source ./config/build.env
+                    echo "Using DL_DIR=${DL_DIR}"
+                    echo "Using SSTATE_DIR=${SSTATE_DIR}"
                     cd "$MANIFEST_DIR"
                     if [ "${ST_AUTO_ACCEPT_EULA}" = "1" ]; then
                         TARGET_EULA_VAR="EULA_${MACHINE//[-.]/}"
                         export "${TARGET_EULA_VAR}=1"
                     fi
-                    export DISTRO MACHINE FORCE_DL_CACHEPREFIX FORCE_SSTATE_CACHEPREFIX
+                    export DISTRO MACHINE FORCE_DL_CACHEPREFIX FORCE_SSTATE_CACHEPREFIX DL_DIR SSTATE_DIR
                     set +u
                     source layers/meta-st/scripts/envsetup.sh "$BUILD_DIR_NAME" >/dev/null
                     set -u

@@ -37,7 +37,7 @@ By default the project uses a repo-local cache layout:
 - downloads: `${PROJECT_ROOT}/.yocto-cache/downloads`
 - sstate: `${PROJECT_ROOT}/.yocto-cache/sstate-cache`
 
-You can override these paths with environment variables before running the scripts:
+You can override these paths with environment variables before running the scripts or from Jenkins job configuration:
 
 ```bash
 export SHARED_CACHE_ROOT=/path/to/shared-cache
@@ -150,6 +150,7 @@ Current pipeline stages:
 
 Jenkins validation note:
 - the Environment validation stage mirrors the shell wrapper behavior, including ST EULA bypass handling, temporary `nounset` disable during `envsetup.sh`, and `bblayers.conf` normalization
+- Jenkins can override cache locations through job-level environment variables without hardcoding machine-specific paths into the repository
 
 ## ST EULA handling
 
