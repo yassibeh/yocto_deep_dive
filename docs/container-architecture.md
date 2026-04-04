@@ -96,6 +96,7 @@ The container flow must work without hardcoded usernames or personal paths.
 
 So the implementation should:
 - derive project root dynamically
+- require explicit container profile selection for supported base distributions
 - allow user/group mapping through environment variables or runtime parameters
 - allow cache locations to be overridden through environment variables
 - allow the container hostname to be configured from the selected container profile/distro

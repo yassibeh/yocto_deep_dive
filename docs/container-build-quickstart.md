@@ -36,9 +36,19 @@ Continue only when:
 
 ## 2. Build the local container image
 
+Choose the container profile explicitly before building.
+
+Example:
+
 ```bash
+export CONTAINER_PROFILE=ubuntu2404
 ./scripts/build-container-image.sh
 ```
+
+Supported values currently are:
+- `ubuntu2004`
+- `ubuntu2204`
+- `ubuntu2404`
 
 Default image tag:
 
@@ -49,11 +59,13 @@ stm32mp-yocto-toolbox:local
 ## 3. Run the containerized build
 
 ```bash
+export CONTAINER_PROFILE=ubuntu2404
 ./scripts/run-container-build.sh
 ```
 
 This mounts the repository workspace and the configured Yocto cache directories into the container and runs the repository build wrapper inside the container.
 The container runtime mirrors the invoking host username and uses a configurable container hostname.
+The hostname is derived from `CONTAINER_PROFILE` unless you override it explicitly with `CONTAINER_HOSTNAME`.
 
 ## 4. Override cache paths if needed
 
@@ -81,7 +93,7 @@ Manual interactive shell example:
 
 ```bash
 docker run --rm -it \
-  --hostname "${CONTAINER_HOSTNAME:-ubuntu2404}" \
+  --hostname "${CONTAINER_HOSTNAME:-${CONTAINER_PROFILE:?set CONTAINER_PROFILE}}" \
   -e LOCAL_UID="$(id -u)" \
   -e LOCAL_GID="$(id -g)" \
   -e LOCAL_USER="$(id -un)" \
@@ -89,6 +101,14 @@ docker run --rm -it \
   -e WORKSPACE_DIR=/workspace \
   -v "$(pwd)":/workspace \
   stm32mp-yocto-toolbox:local
+```
+
+Explicit hostname override still wins:
+
+```bash
+export CONTAINER_PROFILE=ubuntu2404
+export CONTAINER_HOSTNAME=st-yocto-dev
+./scripts/run-container-build.sh
 ```
 
 ## Notes

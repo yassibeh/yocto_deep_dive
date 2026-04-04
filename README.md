@@ -62,6 +62,7 @@ Validated on the current Ubuntu host:
 - required host tools present
 - official ST manifest bootstrap successful
 - OpenSTLinux environment initialization successful
+- containerized OpenSTLinux `core-image-minimal` build completed successfully for `stm32mp13-disco`
 
 Known integration notes:
 - ST `envsetup.sh` is sourced by the wrapper with `nounset` temporarily disabled because the upstream script references some unset variables during initialization
@@ -116,7 +117,10 @@ This script installs the host packages required by the ST OpenSTLinux environmen
 
 ### Path B: local containerized build on Ubuntu
 
-This branch is introducing a portable local containerized build flow for the same ST `oe-manifest` target.
+This branch provides a validated portable local containerized build flow for the same ST `oe-manifest` target.
+
+Validated container profile on this branch:
+- `CONTAINER_PROFILE=ubuntu2404`
 
 #### 1. Install container host prerequisites
 
@@ -124,17 +128,46 @@ This branch is introducing a portable local containerized build flow for the sam
 ./scripts/install-host-deps-container-ubuntu.sh
 ```
 
+If your user was just added to the `docker` group, refresh the current shell before continuing:
+
+```bash
+exec sg docker newgrp
+```
+
+Then verify:
+
+```bash
+id
+docker version
+```
+
 #### 2. Build the local image
 
 ```bash
+export CONTAINER_PROFILE=ubuntu2404
 ./scripts/build-container-image.sh
 ```
+
+Supported profile values currently are:
+- `ubuntu2004`
+- `ubuntu2204`
+- `ubuntu2404`
+
+Current default profile in the scripts:
+- `ubuntu2404`
 
 #### 3. Run the build in the container
 
 ```bash
+export CONTAINER_PROFILE=ubuntu2404
 ./scripts/run-container-build.sh
 ```
+
+Runtime behavior of the validated path:
+- the container user mirrors the invoking host user
+- the container hostname defaults to `CONTAINER_PROFILE`
+- `CONTAINER_HOSTNAME` can override the hostname explicitly
+- ST `envsetup.sh` is forced non-interactive by the wrapper for reproducible container runs
 
 #### 4. Optional cache overrides
 
@@ -146,6 +179,18 @@ export FORCE_DL_CACHEPREFIX=/absolute/path/to/shared-yocto-cache
 export FORCE_SSTATE_CACHEPREFIX=/absolute/path/to/shared-yocto-cache
 ./scripts/run-container-build.sh
 ```
+
+Validated successful deploy path for this containerized build flow:
+
+```bash
+sources/build-openstlinux-weston-stm32mp13-disco/tmp-glibc/deploy/images/stm32mp13-disco
+```
+
+Example generated artifacts from the validated run:
+- `core-image-minimal-openstlinux-weston-stm32mp13-disco.rootfs-<timestamp>.ext4`
+- `core-image-minimal-openstlinux-weston-stm32mp13-disco.rootfs-<timestamp>.tar.xz`
+- `arm-trusted-firmware/tf-a-stm32mp135f-dk-optee-sdcard.stm32`
+- `u-boot/u-boot-stm32mp135f-dk.dtb`
 
 For more details:
 - `docs/container-architecture.md`
@@ -283,6 +328,12 @@ The ST build directory is created under:
 
 ```bash
 sources/build-openstlinux-weston-stm32mp13-disco
+```
+
+For the validated containerized build flow, deployed images are generated under:
+
+```bash
+sources/build-openstlinux-weston-stm32mp13-disco/tmp-glibc/deploy/images/stm32mp13-disco
 ```
 
 Archived outputs are copied to:
