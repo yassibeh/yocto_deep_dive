@@ -6,7 +6,9 @@ This repository automates a first Yocto build for:
 - board: STM32MP135F-DK (`MACHINE=stm32mp13-disco`)
 - image: `core-image-minimal`
 - base distribution: ST OpenSTLinux from the official `oe-manifest`
-- execution model: local Ubuntu host, no Docker
+- execution models:
+  - host-based local/Jenkins build
+  - containerized local build on the dedicated container branch
 
 ## Phase plan
 
@@ -27,6 +29,7 @@ Properties:
 Add:
 - host dependency documentation
 - persistent download and sstate caches
+- containerized build environment for portability
 - build retention policy
 - branch/tag policies
 - optional nightly job

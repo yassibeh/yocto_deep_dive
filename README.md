@@ -7,9 +7,13 @@ Current target:
 - ST machine name: `stm32mp13-disco`
 - Distro: `openstlinux-weston`
 - Image: `core-image-minimal`
-- Host: Ubuntu, no Docker
+- Host: Ubuntu
 - CI: Jenkins pipeline from SCM
 - ST EULA: auto-accepted by default for non-interactive CI builds
+
+Branch note:
+- `main` / current host-build branch documents the validated host-based and Jenkins-based workflow
+- `feature/containerized-st-yocto-build` focuses on validating the same ST `oe-manifest` build flow inside a portable container before any Jenkins/container integration work
 
 ## Purpose
 
@@ -305,5 +309,6 @@ Recommended approach:
 ## Additional documentation
 
 - `docs/architecture.md`
+- `docs/container-architecture.md`
 - `docs/jenkins-company-setup.md`
 - `docs/secure-boot-signing-strategy.md`
