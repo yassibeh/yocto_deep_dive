@@ -1,9 +1,10 @@
 # yocto_deep_dive
 
-Automated Yocto build setup for the STM32MP135F-DK using the official ST OpenSTLinux manifest.
+Automated Yocto build setup for the STM32MP13 Discovery Kit using the official ST OpenSTLinux manifest.
 
 Current target:
-- Board: `stm32mp135f-dk`
+- Board: STM32MP135F-DK
+- ST machine name: `stm32mp13-disco`
 - Distro: `openstlinux-weston`
 - Image: `core-image-minimal`
 - Host: Ubuntu, no Docker
@@ -48,6 +49,7 @@ Known integration notes:
 - the wrapper does not export `BUILD_DIR` before sourcing the ST script because upstream treats that variable as an explicit override and rejects the positional build-directory argument in that case
 - upstream cleanup at the end of `envsetup.sh` unsets variables such as `MACHINE` and `DISTRO`, so the wrapper preserves its own target values before sourcing the ST script
 - the generated ST default `bblayers.conf` template does not enable all required `meta-openembedded` dependency layers for this setup, so the wrapper patches in `meta-oe` and `meta-python` automatically
+- the valid machine identifier in the ST manifest is `stm32mp13-disco`; `stm32mp135f-dk` is the board name, not the Yocto `MACHINE` value used by this release
 
 ## Quick start
 
@@ -98,7 +100,7 @@ Important variables:
 The ST build directory is created under:
 
 ```bash
-sources/build-openstlinux-weston-stm32mp135f-dk
+sources/build-openstlinux-weston-stm32mp13-disco
 ```
 
 Archived outputs are copied to:

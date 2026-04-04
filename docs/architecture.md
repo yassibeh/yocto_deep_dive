@@ -3,7 +3,7 @@
 ## Scope
 
 This repository automates a first Yocto build for:
-- board: `stm32mp135f-dk`
+- board: STM32MP135F-DK (`MACHINE=stm32mp13-disco`)
 - image: `core-image-minimal`
 - base distribution: ST OpenSTLinux from the official `oe-manifest`
 - execution model: local Ubuntu host, no Docker
