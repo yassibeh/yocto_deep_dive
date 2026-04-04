@@ -116,6 +116,9 @@ Important variables:
 - `SSTATE_DIR`
 - `ST_AUTO_ACCEPT_EULA`
 
+Implementation note:
+- `config/build.env` resolves the project root from the file location itself so the same scripts work both in a normal shell and inside Jenkins `sh` steps
+
 ## Build output
 
 The ST build directory is created under:
