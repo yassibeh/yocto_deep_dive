@@ -35,6 +35,7 @@ This repository provides a clean starting point to:
 - `scripts/archive-artifacts.sh` : copy useful outputs to `out/`
 - `scripts/build-container-image.sh` : build the local STM32/Yocto container image
 - `scripts/run-container-build.sh` : run the project build flow inside the local container image
+- `scripts/stm32cubeprogrammer.sh` : helper wrapper for an external STM32CubeProgrammer CLI install
 - `scripts/check-host-deps.sh` : quick host tooling check
 - `containers/stm32mp-yocto/` : container definition for the ST/OpenSTLinux build environment
 - `jenkins/Jenkinsfile` : Jenkins pipeline definition
@@ -169,6 +170,12 @@ Runtime behavior of the validated path:
 - `CONTAINER_HOSTNAME` can override the hostname explicitly
 - ST `envsetup.sh` is forced non-interactive by the wrapper for reproducible container runs
 
+Upstream-aligned tooling policy for this branch:
+- the default build container does not bundle STM32CubeProgrammer
+- STM32CubeProgrammer remains an optional external host-side tool
+- generated OpenSTLinux/ST-compatible artifacts can be flashed afterwards with an external STM32CubeProgrammer install
+- signing/programming tooling is intentionally kept outside the default general-purpose build image
+
 #### 4. Optional cache overrides
 
 ```bash
@@ -191,6 +198,14 @@ Example generated artifacts from the validated run:
 - `core-image-minimal-openstlinux-weston-stm32mp13-disco.rootfs-<timestamp>.tar.xz`
 - `arm-trusted-firmware/tf-a-stm32mp135f-dk-optee-sdcard.stm32`
 - `u-boot/u-boot-stm32mp135f-dk.dtb`
+
+Optional external STM32CubeProgrammer usage after build:
+
+```bash
+./scripts/stm32cubeprogrammer.sh --help
+./scripts/stm32cubeprogrammer.sh list-usb
+./scripts/stm32cubeprogrammer.sh flash-layout USB1 /absolute/path/to/FlashLayout_emmc_stm32mp13-disco_trusted.tsv
+```
 
 For more details:
 - `docs/container-architecture.md`

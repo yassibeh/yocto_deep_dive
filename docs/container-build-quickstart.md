@@ -111,8 +111,37 @@ export CONTAINER_HOSTNAME=st-yocto-dev
 ./scripts/run-container-build.sh
 ```
 
+## 6. Optional STM32CubeProgrammer integration
+
+This repository does not bundle STM32CubeProgrammer inside the default build container.
+That is intentional.
+
+Reasoning:
+- it matches the upstream pattern seen in ST/OpenSTLinux-adjacent projects
+- it avoids forcing vendor installer/license handling into the default build image
+- it keeps the default container focused on reproducible artifact generation
+
+Supported workflow:
+- build OpenSTLinux artifacts in the container
+- use a host-installed or separately mounted `STM32_Programmer_CLI` afterwards
+
+Helper examples:
+
+```bash
+./scripts/stm32cubeprogrammer.sh --help
+./scripts/stm32cubeprogrammer.sh list-usb
+./scripts/stm32cubeprogrammer.sh flash-layout USB1 /absolute/path/to/FlashLayout_emmc_stm32mp13-disco_trusted.tsv
+```
+
+If auto-detection does not find the CLI, point to it explicitly:
+
+```bash
+export STM32CUBEPROGRAMMER_CLI=/usr/local/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin/STM32_Programmer_CLI
+```
+
 ## Notes
 
 - ST upstream `envsetup.sh` remains unchanged and is still sourced by the repository wrapper.
 - Machine-specific paths stay outside tracked files and are provided through environment variables.
 - The container is intended to be disposable; caches and artifacts remain on the host through bind mounts.
+- The validated OpenSTLinux deploy path for this branch is under `tmp-glibc/deploy`, not `tmp/deploy`.

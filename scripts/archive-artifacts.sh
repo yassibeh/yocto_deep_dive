@@ -9,9 +9,9 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 DEST_DIR="${OUT_DIR}/${TIMESTAMP}"
 mkdir -p "${DEST_DIR}"
 
-if [ -d "${ST_BUILD_DIR}/tmp/deploy/images/${MACHINE}" ]; then
+if [ -d "${ST_DEPLOY_DIR}/images/${MACHINE}" ]; then
     mkdir -p "${DEST_DIR}/images"
-    cp -a "${ST_BUILD_DIR}/tmp/deploy/images/${MACHINE}"/. "${DEST_DIR}/images/"
+    cp -a "${ST_DEPLOY_DIR}/images/${MACHINE}"/. "${DEST_DIR}/images/"
 fi
 
 if [ -d "${ST_BUILD_DIR}/tmp/log" ]; then
