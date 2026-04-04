@@ -31,11 +31,19 @@ This repository provides a clean starting point to:
 
 ## Shared Yocto cache
 
-This project reuses the existing shared cache on the host:
+By default the project uses a repo-local cache layout:
 - downloads: `${PROJECT_ROOT}/.yocto-cache/downloads`
 - sstate: `${PROJECT_ROOT}/.yocto-cache/sstate-cache`
 
-This reduces rebuild time and avoids duplicating downloads between workspaces.
+You can override these paths with environment variables before running the scripts:
+
+```bash
+export SHARED_CACHE_ROOT=/path/to/shared-cache
+export DL_DIR=/path/to/shared-cache/downloads
+export SSTATE_DIR=/path/to/shared-cache/sstate-cache
+```
+
+This allows the same repository to work on any machine without editing tracked files.
 
 ## Current validation status
 

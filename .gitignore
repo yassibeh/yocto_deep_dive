@@ -2,3 +2,5 @@ sources/
 build/
 cache/
 out/
+.yocto-cache/
+*.bak-*/

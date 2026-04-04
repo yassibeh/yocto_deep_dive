@@ -42,8 +42,8 @@ Add:
 
 - `sources/` : repo-managed ST Yocto sources
 - `build/` : active OpenEmbedded build directory
-- `${PROJECT_ROOT}/.yocto-cache/downloads/` : shared Yocto source downloads cache
-- `${PROJECT_ROOT}/.yocto-cache/sstate-cache/` : shared Yocto shared-state cache
+- `${PROJECT_ROOT}/.yocto-cache/downloads/` or overridden `DL_DIR` : Yocto source downloads cache
+- `${PROJECT_ROOT}/.yocto-cache/sstate-cache/` or overridden `SSTATE_DIR` : Yocto shared-state cache
 - `out/` : copied outputs intended for CI archival
 
 ## Security model
