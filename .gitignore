@@ -4,3 +4,4 @@ cache/
 out/
 .yocto-cache/
 *.bak-*/
+containers/stm32mp-yocto/vendor/

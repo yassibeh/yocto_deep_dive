@@ -28,11 +28,15 @@ This repository provides a clean starting point to:
 
 - `config/build.env` : build parameters
 - `scripts/install-host-deps-ubuntu.sh` : install required Ubuntu host packages for local builds
+- `scripts/install-host-deps-container-ubuntu.sh` : install host-side container prerequisites for local containerized builds
 - `scripts/setup-jenkins-local-ubuntu.sh` : bootstrap a local Ubuntu Jenkins host for this project
 - `scripts/bootstrap-manifest.sh` : initialize and sync ST sources
 - `scripts/build.sh` : configure environment and run BitBake
 - `scripts/archive-artifacts.sh` : copy useful outputs to `out/`
+- `scripts/build-container-image.sh` : build the local STM32/Yocto container image
+- `scripts/run-container-build.sh` : run the project build flow inside the local container image
 - `scripts/check-host-deps.sh` : quick host tooling check
+- `containers/stm32mp-yocto/` : container definition for the ST/OpenSTLinux build environment
 - `jenkins/Jenkinsfile` : Jenkins pipeline definition
 - `docs/` : design and implementation notes
 
@@ -110,7 +114,44 @@ This script installs the host packages required by the ST OpenSTLinux environmen
 ./scripts/archive-artifacts.sh
 ```
 
-### Path B: local Jenkins build on Ubuntu
+### Path B: local containerized build on Ubuntu
+
+This branch is introducing a portable local containerized build flow for the same ST `oe-manifest` target.
+
+#### 1. Install container host prerequisites
+
+```bash
+./scripts/install-host-deps-container-ubuntu.sh
+```
+
+#### 2. Build the local image
+
+```bash
+./scripts/build-container-image.sh
+```
+
+#### 3. Run the build in the container
+
+```bash
+./scripts/run-container-build.sh
+```
+
+#### 4. Optional cache overrides
+
+```bash
+export SHARED_CACHE_ROOT=/absolute/path/to/shared-yocto-cache
+export DL_DIR=/absolute/path/to/shared-yocto-cache/downloads
+export SSTATE_DIR=/absolute/path/to/shared-yocto-cache/sstate-cache
+export FORCE_DL_CACHEPREFIX=/absolute/path/to/shared-yocto-cache
+export FORCE_SSTATE_CACHEPREFIX=/absolute/path/to/shared-yocto-cache
+./scripts/run-container-build.sh
+```
+
+For more details:
+- `docs/container-architecture.md`
+- `docs/container-build-quickstart.md`
+
+### Path C: local Jenkins build on Ubuntu
 
 This repository is designed so a developer can clone it, read this README, prepare a local Jenkins host, create one Pipeline job from SCM, and run the build without editing tracked files.
 
@@ -310,5 +351,6 @@ Recommended approach:
 
 - `docs/architecture.md`
 - `docs/container-architecture.md`
+- `docs/container-build-quickstart.md`
 - `docs/jenkins-company-setup.md`
 - `docs/secure-boot-signing-strategy.md`
