@@ -5,8 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "${SCRIPT_DIR}/common.sh"
 
-if [ ! -f "${BUILD_DIR}/conf/site.conf" ]; then
-    echo "Missing ${BUILD_DIR}/conf/site.conf. Run environment setup first." >&2
+if [ ! -f "${ST_BUILD_DIR}/conf/site.conf" ]; then
+    echo "Missing ${ST_BUILD_DIR}/conf/site.conf. Run environment setup first." >&2
     exit 1
 fi
 
@@ -22,7 +22,7 @@ replace_or_append() {
     fi
 }
 
-replace_or_append "DL_DIR" "${DL_DIR}" "${BUILD_DIR}/conf/site.conf"
-replace_or_append "SSTATE_DIR" "${SSTATE_DIR}" "${BUILD_DIR}/conf/site.conf"
+replace_or_append "DL_DIR" "${DL_DIR}" "${ST_BUILD_DIR}/conf/site.conf"
+replace_or_append "SSTATE_DIR" "${SSTATE_DIR}" "${ST_BUILD_DIR}/conf/site.conf"
 
 log "Configured site.conf to use direct shared cache paths"

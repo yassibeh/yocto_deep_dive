@@ -43,8 +43,9 @@ Validated on the current Ubuntu host:
 - official ST manifest bootstrap successful
 - OpenSTLinux environment initialization successful
 
-Known integration note:
+Known integration notes:
 - ST `envsetup.sh` is sourced by the wrapper with `nounset` temporarily disabled because the upstream script references some unset variables during initialization
+- the wrapper does not export `BUILD_DIR` before sourcing the ST script because upstream treats that variable as an explicit override and rejects the positional build-directory argument in that case
 
 ## Quick start
 
