@@ -14,25 +14,30 @@ fi
 
 append_layer_if_missing() {
     local layer_path="$1"
-    local escaped_path
-    escaped_path=$(printf '%s
-' "$layer_path" | sed 's/[.[\*^$()+?{|]/\\&/g')
 
-    if grep -Eq "${escaped_path}" "${BBLAYERS_CONF}"; then
+    if grep -Fq "${layer_path}" "${BBLAYERS_CONF}"; then
         return 0
     fi
 
-    awk -v layer="    ${layer_path} \\\" '
-        /BASELAYERS \?= " \\/ && !done {
-            print
-            print layer
-            done=1
-            next
-        }
-        { print }
-    ' "${BBLAYERS_CONF}" > "${BBLAYERS_CONF}.tmp"
+    python3 - "$BBLAYERS_CONF" "$layer_path" <<'PY'
+import sys
+from pathlib import Path
 
-    mv "${BBLAYERS_CONF}.tmp" "${BBLAYERS_CONF}"
+conf_path = Path(sys.argv[1])
+layer = sys.argv[2]
+text = conf_path.read_text()
+needle = 'BASELAYERS ?= " \\\n'
+insert = f'{needle}    {layer} \\\n'
+
+if layer in text:
+    sys.exit(0)
+
+if needle not in text:
+    raise SystemExit(f'Could not find BASELAYERS block in {conf_path}')
+
+text = text.replace(needle, insert, 1)
+conf_path.write_text(text)
+PY
 }
 
 append_layer_if_missing '${OEROOT}/layers/meta-openembedded/meta-oe'
