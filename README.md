@@ -148,6 +148,9 @@ Current pipeline stages:
 - Build
 - Archive outputs
 
+Jenkins validation note:
+- the Environment validation stage mirrors the shell wrapper behavior, including ST EULA bypass handling, temporary `nounset` disable during `envsetup.sh`, and `bblayers.conf` normalization
+
 ## ST EULA handling
 
 For non-interactive CI runs, the wrapper exports the upstream envsetup bypass variable:
