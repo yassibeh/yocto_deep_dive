@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zstd \
  && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -s /bin/bash yocto
+RUN useradd -m -s /bin/bash builder
 
 RUN curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o /usr/local/bin/repo \
  && chmod 0755 /usr/local/bin/repo

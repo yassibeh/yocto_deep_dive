@@ -9,6 +9,7 @@ IMAGE_NAME="${IMAGE_NAME:-stm32mp-yocto-toolbox}"
 IMAGE_TAG="${IMAGE_TAG:-local}"
 CONTAINER_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
 WORKSPACE_DIR="/workspace"
+CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-ubuntu2404}"
 
 COMMAND="${*:-./scripts/build.sh}"
 
@@ -19,6 +20,11 @@ mkdir -p "${DL_DIR}" "${SSTATE_DIR}" "${OUT_DIR}"
 log "Running containerized build with image ${CONTAINER_IMAGE}"
 
 docker run --rm -t \
+    --hostname "${CONTAINER_HOSTNAME}" \
+    -e LOCAL_UID="$(id -u)" \
+    -e LOCAL_GID="$(id -g)" \
+    -e LOCAL_USER="$(id -un)" \
+    -e LOCAL_GROUP="$(id -gn)" \
     -e WORKSPACE_DIR="${WORKSPACE_DIR}" \
     -e SHARED_CACHE_ROOT="${SHARED_CACHE_ROOT}" \
     -e DL_DIR="${DL_DIR}" \

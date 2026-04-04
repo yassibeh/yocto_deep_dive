@@ -44,7 +44,7 @@ This means:
 2. Keep machine-specific paths outside tracked configuration.
 3. Keep private signing keys outside the image and outside the repository.
 4. Use bind-mounted persistent directories for source downloads, sstate cache, and artifacts.
-5. Use a stable container build identity instead of mirroring the host login name inside the image.
+5. Mirror the invoking host username at container runtime while keeping the container hostname configurable and derived from the selected container profile/distro.
 6. Reuse proven container patterns instead of inventing a completely custom Yocto flow.
 
 ## Existing external references
@@ -98,6 +98,7 @@ So the implementation should:
 - derive project root dynamically
 - allow user/group mapping through environment variables or runtime parameters
 - allow cache locations to be overridden through environment variables
+- allow the container hostname to be configured from the selected container profile/distro
 - avoid embedding host-specific absolute paths in tracked files
 
 ## Tooling scope
