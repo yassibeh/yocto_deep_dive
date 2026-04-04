@@ -1,113 +1,124 @@
-# Yocto autobuild for STM32MP135F-DK
+# yocto_deep_dive
 
-Professional starter setup for automating an OpenSTLinux Yocto build on a local Ubuntu host, without Docker, using Jenkins.
+Automated Yocto build setup for the STM32MP135F-DK using the official ST OpenSTLinux manifest.
 
-Initial scope:
-- board: `stm32mp135f-dk`
-- base: official ST `oe-manifest`
-- image: `core-image-minimal`
-- host execution: directly on the PC
-- signing/secure-boot keys: intentionally excluded from the first CI implementation
+Current target:
+- Board: `stm32mp135f-dk`
+- Distro: `openstlinux-weston`
+- Image: `core-image-minimal`
+- Host: Ubuntu, no Docker
+- CI: Jenkins pipeline from SCM
 
-## Goal
+## Purpose
 
-Get a reproducible first autobuild working before introducing release signing.
+This repository provides a clean starting point to:
+- fetch the official ST Yocto sources
+- configure the OpenSTLinux build environment
+- build a test image
+- archive build outputs
+- prepare a Jenkins-based continuous integration flow
 
-The first milestone is:
-1. checkout the official STM32 Yocto manifest
-2. initialize the OpenSTLinux build environment
-3. build `core-image-minimal` for `stm32mp135f-dk`
-4. archive logs and deploy artifacts
-5. structure the repository so Jenkins can run it cleanly
+## Repository structure
 
-## Repository layout
+- `config/build.env` : build parameters
+- `scripts/bootstrap-manifest.sh` : initialize and sync ST sources
+- `scripts/build.sh` : configure environment and run BitBake
+- `scripts/archive-artifacts.sh` : copy useful outputs to `out/`
+- `scripts/check-host-deps.sh` : quick host tooling check
+- `jenkins/Jenkinsfile` : Jenkins pipeline definition
+- `docs/` : design and implementation notes
 
-- `config/build.env` : build parameters used by scripts and Jenkins
-- `scripts/bootstrap-manifest.sh` : initializes or syncs the ST manifest workspace
-- `scripts/build.sh` : launches the Yocto build
-- `scripts/archive-artifacts.sh` : copies deploy artifacts and logs into `out/`
-- `jenkins/Jenkinsfile` : starter Jenkins pipeline
-- `docs/` : implementation notes and next steps
+## Shared Yocto cache
 
-## First-use flow
+This project reuses the existing shared cache on the host:
+- downloads: `${PROJECT_ROOT}/.yocto-cache/downloads`
+- sstate: `${PROJECT_ROOT}/.yocto-cache/sstate-cache`
 
-### 1. Review build parameters
+This reduces rebuild time and avoids duplicating downloads between workspaces.
 
-Edit:
+## Quick start
 
-`config/build.env`
+### 1. Go to the project directory
 
-Main values:
+```bash
+cd /path/to/yocto_deep_dive
+```
+
+### 2. Check host tools
+
+```bash
+./scripts/check-host-deps.sh
+```
+
+### 3. Fetch and sync the ST manifest
+
+```bash
+./scripts/bootstrap-manifest.sh
+```
+
+### 4. Run the build
+
+```bash
+./scripts/build.sh
+```
+
+### 5. Archive build outputs
+
+```bash
+./scripts/archive-artifacts.sh
+```
+
+## Main configuration file
+
+Edit `config/build.env` if needed.
+
+Important variables:
 - `ST_MANIFEST_TAG`
 - `MACHINE`
 - `DISTRO`
 - `YOCTO_IMAGE`
-- shared cache paths
+- `DL_DIR`
+- `SSTATE_DIR`
 
-### 2. Bootstrap the manifest workspace
+## Build output
 
-```bash
-cd /path/to/yocto_deep_dive
-./scripts/bootstrap-manifest.sh
-```
-
-### 3. Start a manual test build
+The ST build directory is created under:
 
 ```bash
-cd /path/to/yocto_deep_dive
-./scripts/build.sh
+sources/build-openstlinux-weston-stm32mp135f-dk
 ```
 
-### 4. Inspect archived outputs
+Archived outputs are copied to:
 
 ```bash
-ls -R out/
+out/
 ```
 
-## Jenkins
+## Jenkins usage
 
-The starter pipeline lives in:
+Use a Jenkins Pipeline job configured as:
+- Pipeline from SCM
+- repository: this repository
+- script path: `jenkins/Jenkinsfile`
 
-`jenkins/Jenkinsfile`
+Current pipeline stages:
+- Checkout
+- Host validation
+- Source bootstrap
+- Environment validation
+- Build
+- Archive outputs
 
-It is designed for a Jenkins job that points to this repository and runs directly on a Linux machine with Yocto host dependencies installed.
+## Security note
 
-## Shared cache usage
+This first implementation does not include secure-boot private keys in CI.
 
-This setup is now configured to reuse the existing host caches:
+Recommended approach:
+- validate unsigned builds first
+- add signing later in a separate restricted release pipeline
 
-- downloads: `${PROJECT_ROOT}/.yocto-cache/downloads`
-- sstate: `${PROJECT_ROOT}/.yocto-cache/sstate-cache`
+## Additional documentation
 
-That is the right approach for Jenkins on the same machine because it:
-- reduces fetch time
-- avoids rebuilding already-covered tasks
-- keeps cache management centralized across Yocto workspaces
-
-## Security position for phase 1
-
-Private secure-boot keys are not integrated into this first autobuild.
-
-Reason:
-- first get deterministic unsigned builds working
-- keep private keys off the general build path
-- add signing later as a separate restricted release stage
-
-See:
 - `docs/architecture.md`
+- `docs/jenkins-company-setup.md`
 - `docs/secure-boot-signing-strategy.md`
-
-## Current implementation status
-
-Implemented in this repo:
-- starter repo structure
-- bootstrap/build/archive scripts
-- Jenkins starter pipeline
-- phase-based architecture notes
-
-Not implemented yet:
-- Jenkins installation on host
-- signing pipeline
-- release approval flow
-- artifact repository publication
-- metrics/notifications
