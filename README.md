@@ -61,7 +61,7 @@ Known integration notes:
 - the generated ST default `bblayers.conf` template does not enable all required `meta-openembedded` dependency layers for this setup, so the wrapper patches in `meta-oe` and `meta-python` automatically
 - the valid machine identifier in the ST manifest is `stm32mp13-disco`; `stm32mp135f-dk` is the board name, not the Yocto `MACHINE` value used by this release
 - if an existing build directory contains a mismatched previous `DISTRO` or `MACHINE`, the wrapper archives it automatically and recreates a clean ST build directory for the requested target
-- for CI use, the wrapper can export `ACCEPT_EULA_<MACHINE>=1` automatically so the ST setup does not stop on an interactive EULA prompt
+- for CI use, the wrapper can export the upstream `EULA_<machine-without-dashes-or-dots>=1` variable automatically so the ST setup does not stop on an interactive EULA prompt
 
 ## Quick start
 
@@ -147,10 +147,16 @@ Current pipeline stages:
 
 ## ST EULA handling
 
-For non-interactive CI runs, the wrapper exports the ST-supported variable:
+For non-interactive CI runs, the wrapper exports the upstream envsetup bypass variable:
 
 ```bash
-ACCEPT_EULA_stm32mp13-disco=1
+EULA_stm32mp13disco=1
+```
+
+The ST setup then writes the corresponding Yocto setting into `local.conf`:
+
+```bash
+ACCEPT_EULA_stm32mp13-disco = "1"
 ```
 
 This is enabled by default through:
