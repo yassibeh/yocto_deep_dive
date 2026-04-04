@@ -68,8 +68,8 @@ pipeline {
                     set +u
                     source layers/meta-st/scripts/envsetup.sh "$BUILD_DIR_NAME" >/dev/null
                     set -u
-                    ../scripts/configure-cache-paths.sh
-                    ../scripts/configure-bblayers.sh
+                    "$PROJECT_ROOT/scripts/configure-cache-paths.sh"
+                    "$PROJECT_ROOT/scripts/configure-bblayers.sh"
                     test -f "$BUILDDIR/conf/local.conf"
                     test -f "$BUILDDIR/conf/bblayers.conf"
                     test -f "$BUILDDIR/conf/site.conf"
