@@ -61,7 +61,7 @@ pipeline {
                     source ./config/build.env
                     cd "$MANIFEST_DIR"
                     if [ "${ST_AUTO_ACCEPT_EULA}" = "1" ]; then
-                        TARGET_EULA_VAR="EULA_$(printf '%s' "${MACHINE}" | sed 's/-//g; s/\.//g')"
+                        TARGET_EULA_VAR="EULA_${MACHINE//[-.]/}"
                         export "${TARGET_EULA_VAR}=1"
                     fi
                     export DISTRO MACHINE FORCE_DL_CACHEPREFIX FORCE_SSTATE_CACHEPREFIX
