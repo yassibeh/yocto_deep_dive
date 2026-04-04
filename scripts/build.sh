@@ -27,7 +27,7 @@ fi
 export DISTRO MACHINE BB_NUMBER_THREADS PARALLEL_MAKE FORCE_DL_CACHEPREFIX FORCE_SSTATE_CACHEPREFIX
 set +u
 # shellcheck disable=SC1091
-source layers/meta-st/scripts/envsetup.sh "${BUILD_DIR_NAME}" >/dev/null
+source layers/meta-st/scripts/envsetup.sh --no-ui "${BUILD_DIR_NAME}" >/dev/null
 set -u
 
 "${SCRIPT_DIR}/configure-cache-paths.sh"
