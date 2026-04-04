@@ -43,6 +43,9 @@ Validated on the current Ubuntu host:
 - official ST manifest bootstrap successful
 - OpenSTLinux environment initialization successful
 
+Known integration note:
+- ST `envsetup.sh` is sourced by the wrapper with `nounset` temporarily disabled because the upstream script references some unset variables during initialization
+
 ## Quick start
 
 ### 1. Go to the project directory
