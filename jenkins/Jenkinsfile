@@ -9,8 +9,9 @@ pipeline {
         skipDefaultCheckout(true)
     }
 
-    // Intentionally no SCM polling here.
-    // Preferred model: manual bring-up now, webhook or scheduled Jenkins trigger later.
+    triggers {
+        pollSCM('@hourly')
+    }
 
     parameters {
         booleanParam(name: 'BUILD_CONTAINER_IMAGE', defaultValue: true, description: 'Build or refresh the local Yocto container image before running the build')
@@ -23,14 +24,25 @@ pipeline {
         LC_ALL = 'C.UTF-8'
         LANG = 'C.UTF-8'
         CONTAINER_PROFILE = 'ubuntu2404'
+        CI_ARTIFACT_ROOT = 'out'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout and workspace preparation') {
             steps {
                 checkout scm
                 sh 'git status --short || true'
                 sh 'git log -1 --oneline'
+                sh 'mkdir -p out'
+            }
+        }
+
+        stage('Container image build or reuse') {
+            when {
+                expression { return params.BUILD_CONTAINER_IMAGE }
+            }
+            steps {
+                sh './scripts/build-container-image.sh'
             }
         }
 
@@ -63,6 +75,24 @@ pipeline {
             }
         }
 
+        stage('Environment verification inside the container') {
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+                    docker run --rm \
+                        --hostname ubuntu24 \
+                        -e LOCAL_UID="$(id -u)" \
+                        -e LOCAL_GID="$(id -g)" \
+                        -e LOCAL_USER="$(id -un)" \
+                        -e LOCAL_GROUP="$(id -gn)" \
+                        -e WORKSPACE_DIR=/workspace \
+                        -v "$PWD":/workspace \
+                        stm32mp-yocto-toolbox:local \
+                        bash -lc 'set -e; cat /etc/os-release; repo --version; python3 --version; git --version'
+                '''
+            }
+        }
+
         stage('Prepare shared cache access') {
             steps {
                 sh '''#!/usr/bin/env bash
@@ -76,16 +106,7 @@ pipeline {
             }
         }
 
-        stage('Build container image') {
-            when {
-                expression { return params.BUILD_CONTAINER_IMAGE }
-            }
-            steps {
-                sh './scripts/build-container-image.sh'
-            }
-        }
-
-        stage('Verify STM32 CLI tools in container') {
+        stage('STM32 CLI verification inside the container') {
             when {
                 expression { return params.VERIFY_STM32_TOOLS }
             }
@@ -102,7 +123,7 @@ pipeline {
                             -e WORKSPACE_DIR=/workspace \
                             -v "$PWD":/workspace \
                             stm32mp-yocto-toolbox:local \
-                            ./scripts/verify-stm32-cli-tools.sh
+                            ./scripts/verify-stm32-cli-tools.sh | tee out/stm32-cli-verify.log
                     else
                         echo "STM32CubeProgrammer content not supplied; skipping STM32 CLI verification."
                     fi
@@ -110,7 +131,7 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Yocto build execution inside the container') {
             when {
                 expression { return params.RUN_BUILD }
             }
@@ -119,7 +140,7 @@ pipeline {
             }
         }
 
-        stage('Archive outputs') {
+        stage('Artifact collection') {
             when {
                 expression { return params.ARCHIVE_OUTPUTS }
             }
@@ -127,17 +148,28 @@ pipeline {
                 sh './scripts/archive-artifacts.sh'
             }
         }
+
+        stage('Artifact archiving/publication') {
+            when {
+                expression { return params.ARCHIVE_OUTPUTS }
+            }
+            steps {
+                archiveArtifacts artifacts: 'out/**/*', fingerprint: true, allowEmptyArchive: false
+            }
+        }
     }
 
     post {
-        always {
-            archiveArtifacts artifacts: 'out/**/*', fingerprint: true, allowEmptyArchive: true
-        }
         success {
-            echo 'Pipeline completed successfully.'
+            echo 'Pipeline completed successfully. Artifacts are archived from out/.'
         }
         failure {
             echo 'Pipeline failed. Inspect console output and archived artifacts.'
+        }
+        always {
+            script {
+                currentBuild.description = "${env.BRANCH_NAME ?: 'detached'} @ ${env.GIT_COMMIT ?: 'unknown'}"
+            }
         }
     }
 }

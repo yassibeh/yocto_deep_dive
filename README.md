@@ -193,6 +193,24 @@ The Jenkins build stage invokes:
 ./scripts/run-container-build.sh
 ```
 
+Trigger model on this branch:
+- every pushed commit is intended to be validated automatically by Jenkins
+- the Jenkinsfile includes SCM polling as a default trigger baseline
+- in a production Jenkins setup, prefer SCM webhooks for push and pull-request / merge-request events so candidate integrations are validated before merge
+- integration policy should require a green pipeline before merging to the protected integration branch
+
+Implemented Jenkins stages on this branch:
+1. Checkout and workspace preparation
+2. Container image build or reuse
+3. Host validation
+4. Source bootstrap
+5. Environment verification inside the container
+6. Prepare shared cache access
+7. STM32 CLI verification inside the container
+8. Yocto build execution inside the container
+9. Artifact collection
+10. Artifact archiving/publication
+
 #### 6. Expected integrated result
 
 You should get:
@@ -200,6 +218,7 @@ You should get:
 - optional STM32 CLI verification inside the container image when STM32CubeProgrammer content is supplied
 - `core-image-minimal` built inside the container
 - archived artifacts under `out/`
+- downloadable logs and metadata for build traceability
 
 ### Validated clean-clone container workflow
 
@@ -627,11 +646,12 @@ Recommended parameters:
 
 A successful Jenkins run should show:
 - manifest bootstrap succeeds
-- `Prepare shared cache access` stage runs
-- `Build container image` stage runs successfully
-- optional `Verify STM32 CLI tools in container` stage passes when STM32CubeProgrammer content is supplied
+- `Container image build or reuse` stage runs successfully or reuses the local image
+- `Environment verification inside the container` stage passes
+- optional `STM32 CLI verification inside the container` stage passes when STM32CubeProgrammer content is supplied
 - BitBake runs through `./scripts/run-container-build.sh`
-- artifacts are copied to `out/<timestamp>/`
+- `Artifact collection` gathers deploy outputs, logs, and metadata into `out/<timestamp>/`
+- `Artifact archiving/publication` archives those outputs in Jenkins
 - final status is `SUCCESS`
 
 Validated reference result on the current local Ubuntu/Jenkins bring-up:
@@ -683,22 +703,36 @@ Use a Jenkins Pipeline job configured as:
 - script path: `jenkins/Jenkinsfile`
 
 Current pipeline stages:
-- Checkout
+- Checkout and workspace preparation
+- Container image build or reuse
 - Host validation
 - Source bootstrap
+- Environment verification inside the container
 - Prepare shared cache access
-- Build container image
-- Verify STM32 CLI tools in container
-- Build
-- Archive outputs
+- STM32 CLI verification inside the container
+- Yocto build execution inside the container
+- Artifact collection
+- Artifact archiving/publication
 
 Jenkins implementation notes:
 - the Jenkins entry point is `jenkins/Jenkinsfile`
 - the real Yocto build entry point used by Jenkins is `./scripts/run-container-build.sh`
+- the default trigger model in the Jenkinsfile is SCM polling; in a production setup this should normally be replaced or complemented by push and pull-request / merge-request webhooks
 - Jenkins can override cache locations through job-level environment variables without hardcoding machine-specific paths into the repository
 - the pipeline self-configures Git `safe.directory` for the Jenkins user before the build so shared Yocto `downloads/git2` mirrors can be reused without repeated manual operator fixes on a local single-user Jenkins machine
 - the pipeline assumes Docker is available on the Jenkins host and that the Jenkins user can invoke it
-- the Jenkinsfile intentionally does not enable SCM polling during bring-up; prefer manual runs now, then move to a webhook or explicit nightly schedule later
+- the pipeline archives `out/**/*` as downloadable Jenkins artifacts when the build reaches the archive stage
+
+Archived artifact content on this branch includes:
+- deployed Yocto image outputs from `tmp-glibc/deploy/images/${MACHINE}`
+- build logs copied from `${ST_BUILD_DIR}/tmp/log`
+- `local.conf`, `bblayers.conf`, `site.conf`, and `sanity_info` when present
+- `out/stm32-cli-verify.log` when STM32 CLI verification ran
+- pinned repo manifest export when available
+- git commit information for the build workspace
+- manifest repository revision information when available
+- Docker version and container image inspection metadata
+- resolved build environment summary and deploy file listing
 
 ## ST EULA handling
 
