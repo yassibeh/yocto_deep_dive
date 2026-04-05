@@ -74,6 +74,15 @@ RUNTIME_HOME="$(getent passwd "${RUNTIME_USER}" | cut -d: -f6)"
 mkdir -p "${WORKSPACE_DIR}" "${RUNTIME_HOME}"
 chown "${TARGET_UID}:${TARGET_GID}" "${RUNTIME_HOME}"
 
+PROFILE_SCRIPT="${RUNTIME_HOME}/.profile"
+if ! grep -Fq '/opt/st/STM32CubeProgrammer/bin' "${PROFILE_SCRIPT}" 2>/dev/null; then
+    cat >>"${PROFILE_SCRIPT}" <<'EOF'
+export STM32CUBE_PROGRAMMER_ROOT=/opt/st/STM32CubeProgrammer
+export PATH=/opt/st/STM32CubeProgrammer/bin:${PATH}
+EOF
+    chown "${TARGET_UID}:${TARGET_GID}" "${PROFILE_SCRIPT}"
+fi
+
 if [ -d "${WORKSPACE_DIR}/.git" ]; then
     su - "${RUNTIME_USER}" -c "git config --global --add safe.directory '${WORKSPACE_DIR}'" >/dev/null 2>&1 || true
 fi

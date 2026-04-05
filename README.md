@@ -10,7 +10,7 @@ Current target:
 - Host: Ubuntu
 - CI: Jenkins pipeline from SCM
 - ST EULA: auto-accepted by default for non-interactive CI builds
-- Container branch goal: reproducible STM32MP Yocto development inside Docker, with STM32CubeProgrammer-related CLI tooling integrated when an official ST package is supplied
+- Container branch goal: reproducible STM32MP Yocto development inside Docker, with STM32CubeProgrammer-related CLI tooling integrated and verified inside the image when an official ST package is supplied
 
 Branch note:
 - `main` / current host-build branch documents the validated host-based and Jenkins-based workflow
@@ -77,6 +77,13 @@ Known integration notes:
 - the container image now includes `openssh-client` because ST `repo sync` may require SSH transport
 - the container entrypoint now registers the bind-mounted workspace and repo internals as Git safe directories to avoid ownership-related Git failures during `repo` usage
 - the containerized `core-image-minimal` build for `stm32mp13-disco` completed successfully on this branch
+- STM32CubeProgrammer 2.21.0 was installed once on the host from the official ST Linux installer and the resulting installation tree was successfully injected into the container image through `STM32CUBEPROG_DIR`
+- verified in-container CLI tools from that installed tree are:
+  - `STM32_Programmer_CLI`
+  - `STM32_KeyGen_CLI`
+  - `STM32_SigningTool_CLI`
+  - `STM32TrustedPackageCreator_CLI`
+- `STM32TrustedPackageCreator` is a GUI binary and is not suitable for headless verification in the container without X11/Wayland or additional Qt platform setup
 
 ## Quick start
 
@@ -190,7 +197,7 @@ Supported integration inputs implemented by this branch:
 - `STM32CUBEPROG_BUNDLE`: path to an official STM32CubeProgrammer bundle staged on the host
 
 Current status of each path:
-- `STM32CUBEPROG_DIR`: implemented in the image build logic and intended to copy a known-good installed tree into `/opt/st/STM32CubeProgrammer`
+- `STM32CUBEPROG_DIR`: implemented and validated; it copies a known-good installed tree into `/opt/st/STM32CubeProgrammer`
 - `STM32CUBEPROG_BUNDLE`: implemented for bundle-based installation hooks, but the locally available official ST `.linux` installer was proven to be Java-backed and interactive by default, so unattended installation from that specific installer format is not yet proven in this branch
 
 Local vendor staging directory used by the build helper:
@@ -201,11 +208,27 @@ containers/stm32mp-yocto/vendor/
 
 This directory is git-ignored and intended only for local non-committed vendor assets.
 
-Example with an already unpacked install tree:
+Validated procedure with an already installed STM32CubeProgrammer tree:
+
+1. Install STM32CubeProgrammer once on the host from the official ST installer.
+
+Validated host-side installer flow in this branch:
+- launch the official ST Linux installer interactively
+- accept the ST license
+- keep the default component selection including:
+  - `STM32CubeProgrammer`
+  - `STM32TrustedPackageCreator`
+- install to the default host tree:
+
+```text
+/home/<user>/STMicroelectronics/STM32Cube/STM32CubeProgrammer
+```
+
+2. Rebuild the container image from that installed tree:
 
 ```bash
 export CONTAINER_PROFILE=ubuntu2404
-export STM32CUBEPROG_DIR=/absolute/path/to/STM32CubeProgrammer
+export STM32CUBEPROG_DIR=/home/$USER/STMicroelectronics/STM32Cube/STM32CubeProgrammer
 ./scripts/build-container-image.sh
 ```
 
@@ -222,18 +245,33 @@ License note:
 - this repository does not download it from unofficial sources
 - if your ST package requires an interactive installer, perform that installation once outside the image, then rebuild the container using `STM32CUBEPROG_DIR`
 
-Verification commands inside a container built with STM32CubeProgrammer content:
+Validated verification commands inside a container built with STM32CubeProgrammer content:
 
 ```bash
 which STM32_Programmer_CLI
+which STM32_KeyGen_CLI
+which STM32_SigningTool_CLI
+which STM32TrustedPackageCreator_CLI
+
 STM32_Programmer_CLI --help
-which STM32MP_KeyGen_CLI || true
-which STM32_KeyGen_CLI || true
-which STM32MP_SigningTool_CLI || true
-which STM32_SigningTool_CLI || true
-which STM32TrustedPackageCreator || true
-which STM32TrustedPackageCreator_CLI || true
+STM32_KeyGen_CLI --help
+STM32_SigningTool_CLI --help
+STM32TrustedPackageCreator_CLI --help
 ```
+
+Validated in-container binary paths from this branch:
+
+```text
+/opt/st/STM32CubeProgrammer/bin/STM32_Programmer_CLI
+/opt/st/STM32CubeProgrammer/bin/STM32_KeyGen_CLI
+/opt/st/STM32CubeProgrammer/bin/STM32_SigningTool_CLI
+/opt/st/STM32CubeProgrammer/bin/STM32TrustedPackageCreator
+/opt/st/STM32CubeProgrammer/bin/STM32TrustedPackageCreator_CLI
+```
+
+Headless note:
+- `STM32TrustedPackageCreator` is the GUI binary and fails in a plain headless container because Qt cannot initialize the `xcb` platform plugin without display/runtime support
+- use `STM32TrustedPackageCreator_CLI` for non-GUI workflows inside the build container
 
 #### 5. Optional cache overrides
 
@@ -268,8 +306,8 @@ Optional host-side STM32CubeProgrammer usage after build remains available:
 
 Important distinction:
 - the containerized Yocto build is proven and validated on this branch
-- integrated STM32CubeProgrammer support is implemented as a reproducible local-supply mechanism
-- automatic unattended installation from the tested official ST `.linux` installer is not yet proven and remains the main open STM32 CLI integration gap
+- integrated STM32CubeProgrammer CLI support is also proven and validated on this branch when using `STM32CUBEPROG_DIR` with a host-installed official ST tree
+- automatic unattended installation directly from the tested official ST `.linux` installer is still not proven and remains only a convenience gap, not a blocker for the working end-to-end container workflow
 
 For more details:
 - `docs/container-architecture.md`
