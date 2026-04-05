@@ -100,6 +100,13 @@ copy_install_tree() {
     rm -rf "${DEST_DIR}"
     mkdir -p "$(dirname "${DEST_DIR}")"
     cp -a "${source_root}" "${DEST_DIR}"
+
+    rm -rf \
+        "${DEST_DIR}/uninstaller" \
+        "${DEST_DIR}/.installationinformation" \
+        "${DEST_DIR}/.install4j" \
+        "${DEST_DIR}/.install4j"* \
+        "${DEST_DIR}/install.builder"
 }
 
 if [ -n "${SRC_DIR}" ]; then

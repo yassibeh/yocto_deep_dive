@@ -87,6 +87,83 @@ Known integration notes:
 
 ## Quick start
 
+### Validated clean-clone container workflow
+
+Use this section if your goal is the validated end-to-end path on this branch.
+
+#### 1. Clone the repository and check out the branch
+
+```bash
+git clone <repo-url>
+cd yocto_deep_dive
+git checkout feature/containerized-st-yocto-build
+```
+
+#### 2. Install host container prerequisites
+
+```bash
+./scripts/install-host-deps-container-ubuntu.sh
+```
+
+If Docker group membership changed, refresh the shell and verify Docker access:
+
+```bash
+exec sg docker newgrp
+id
+docker version
+```
+
+#### 3. Install STM32CubeProgrammer once on the host from the official ST installer
+
+Validated host-side source used on this branch:
+- official ST Linux installer `SetupSTM32CubeProgrammer-2.21.0.linux`
+
+Validated resulting host install tree:
+
+```text
+/home/$USER/STMicroelectronics/STM32Cube/STM32CubeProgrammer
+```
+
+#### 4. Build the container image with STM32CubeProgrammer integrated
+
+```bash
+export CONTAINER_PROFILE=ubuntu2404
+export STM32CUBEPROG_DIR=/home/$USER/STMicroelectronics/STM32Cube/STM32CubeProgrammer
+./scripts/build-container-image.sh
+```
+
+#### 5. Verify STM32 CLI tools inside the image
+
+```bash
+docker run --rm \
+  -e LOCAL_UID=$(id -u) \
+  -e LOCAL_GID=$(id -g) \
+  -e LOCAL_USER=$(id -un) \
+  -e LOCAL_GROUP=$(id -gn) \
+  -e WORKSPACE_DIR=/workspace \
+  -v "$(pwd)":/workspace \
+  stm32mp-yocto-toolbox:local \
+  ./scripts/verify-stm32-cli-tools.sh
+```
+
+#### 6. Run the containerized Yocto build
+
+```bash
+export CONTAINER_PROFILE=ubuntu2404
+./scripts/run-container-build.sh
+```
+
+#### 7. Expected successful result
+
+You should end with:
+- STM32 CLI verification script reporting success
+- `bitbake core-image-minimal` finishing successfully inside the container
+- deploy artifacts under:
+
+```text
+sources/build-openstlinux-weston-stm32mp13-disco/tmp-glibc/deploy/images/stm32mp13-disco
+```
+
 ### Path A: local command-line build
 
 #### 1. Go to the project directory
@@ -188,7 +265,7 @@ STM32CubeProgrammer integration policy on this branch:
 - if STM32CubeProgrammer is integrated successfully, its CLI tools are added to `PATH` under `/opt/st/STM32CubeProgrammer/bin`
 - if STM32CubeProgrammer is not supplied, the Yocto build flow still works, but STM32 programming/signing CLI tools are not present inside the image
 
-#### 4. Optional STM32CubeProgrammer integration
+#### 4. STM32CubeProgrammer integration
 
 The container image can integrate STM32CubeProgrammer when you provide official ST content locally.
 
@@ -273,7 +350,7 @@ Headless note:
 - `STM32TrustedPackageCreator` is the GUI binary and fails in a plain headless container because Qt cannot initialize the `xcb` platform plugin without display/runtime support
 - use `STM32TrustedPackageCreator_CLI` for non-GUI workflows inside the build container
 
-#### 5. Optional cache overrides
+#### 5. Cache overrides
 
 ```bash
 export SHARED_CACHE_ROOT=/absolute/path/to/shared-yocto-cache
