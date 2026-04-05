@@ -12,6 +12,7 @@ Usage:
 Purpose:
 - install Jenkins on Ubuntu
 - ensure the jenkins service is enabled and started
+- install Docker/container prerequisites for the containerized Yocto pipeline
 - prepare a shared Yocto cache directory for Jenkins reuse
 - grant the current user and Jenkins group access to the shared cache
 - print the exact remaining UI steps required to create the Jenkins Pipeline job
@@ -24,7 +25,7 @@ Notes:
 EOF
 }
 
-JENKINS_JOB="yocto-stm32mp13-autobuild"
+JENKINS_JOB="yocto-stm32mp13-container-autobuild"
 JENKINS_URL="http://127.0.0.1:8080"
 SHARED_CACHE_ROOT=""
 
@@ -94,14 +95,18 @@ require_cmd chmod
 require_cmd chown
 require_cmd find
 require_cmd id
+require_cmd curl
 
-log "Installing Jenkins and required host packages"
+log "Installing Jenkins, Docker, and required host packages"
 ${SUDO} apt-get update
 ${SUDO} apt-get install -y \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
     openjdk-17-jre-headless \
     jenkins \
     git \
-    repo \
     python3 \
     python3-pip \
     python3-pexpect \
@@ -132,7 +137,8 @@ ${SUDO} apt-get install -y \
     git-lfs \
     libusb-1.0-0 \
     file \
-    rsync
+    rsync \
+    docker.io
 
 log "Enabling and starting Jenkins service"
 ${SUDO} systemctl enable --now jenkins
@@ -149,6 +155,11 @@ ${SUDO} find "${SHARED_CACHE_ROOT}" -type f -exec chmod 0664 {} \; || true
 log "Adding ${CURRENT_USER} to jenkins group"
 ${SUDO} usermod -aG jenkins "${CURRENT_USER}"
 
+log "Granting Docker access to Jenkins and ${CURRENT_USER}"
+${SUDO} usermod -aG docker jenkins
+${SUDO} usermod -aG docker "${CURRENT_USER}"
+${SUDO} systemctl enable --now docker
+
 log "Configuring Git trust for Jenkins shared cache reuse"
 ${SUDO} -u jenkins git config --global --replace-all safe.directory '*'
 
@@ -158,6 +169,8 @@ Local Jenkins bootstrap completed.
 
 What was configured:
 - Jenkins service installed and started
+- Docker installed and started
+- jenkins user added to docker group
 - shared cache root prepared: ${SHARED_CACHE_ROOT}
 - downloads cache: ${CACHE_DOWNLOADS}
 - sstate cache: ${CACHE_SSTATE}
@@ -174,7 +187,7 @@ Create a Pipeline job with:
 - Definition: Pipeline script from SCM
 - SCM: Git
 - Repository URL: <your repository clone URL>
-- Branch: your working branch, for example */feature/yocto-autobuild-stm32mp135f-dk
+- Branch: your working branch, for example */feature/jenkins-containerized-st-yocto-build
 - Script Path: jenkins/Jenkinsfile
 
 Then set Jenkins environment variables either at the job level or globally:
@@ -183,6 +196,10 @@ Then set Jenkins environment variables either at the job level or globally:
 - SSTATE_DIR=${CACHE_SSTATE}
 - FORCE_DL_CACHEPREFIX=${SHARED_CACHE_ROOT}
 - FORCE_SSTATE_CACHEPREFIX=${SHARED_CACHE_ROOT}
+- CONTAINER_PROFILE=ubuntu2404
+
+Optional when STM32CubeProgrammer CLI tools must be present in the Jenkins-built image:
+- STM32CUBEPROG_DIR=/absolute/path/to/a/host-installed/STM32CubeProgrammer/tree
 
 Important:
 - log out and back in if you want the new jenkins group membership to apply to your interactive shell

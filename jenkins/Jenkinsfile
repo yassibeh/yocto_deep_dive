@@ -13,13 +13,16 @@ pipeline {
     // Preferred model: manual bring-up now, webhook or scheduled Jenkins trigger later.
 
     parameters {
-        booleanParam(name: 'RUN_BUILD', defaultValue: true, description: 'Run the Yocto build stage')
+        booleanParam(name: 'BUILD_CONTAINER_IMAGE', defaultValue: true, description: 'Build or refresh the local Yocto container image before running the build')
+        booleanParam(name: 'RUN_BUILD', defaultValue: true, description: 'Run the Yocto build stage inside the container')
+        booleanParam(name: 'VERIFY_STM32_TOOLS', defaultValue: true, description: 'Verify STM32 CLI tooling inside the container image when STM32CubeProgrammer content is supplied')
         booleanParam(name: 'ARCHIVE_OUTPUTS', defaultValue: true, description: 'Archive out/ artifacts at the end')
     }
 
     environment {
         LC_ALL = 'C.UTF-8'
         LANG = 'C.UTF-8'
+        CONTAINER_PROFILE = 'ubuntu2404'
     }
 
     stages {
@@ -33,15 +36,22 @@ pipeline {
 
         stage('Host validation') {
             parallel {
-                stage('Tooling') {
+                stage('Container tooling') {
                     steps {
-                        sh './scripts/check-host-deps.sh'
+                        sh '''#!/usr/bin/env bash
+                            set -euo pipefail
+                            command -v docker
+                            docker version
+                        '''
                     }
                 }
                 stage('Config') {
                     steps {
                         sh 'test -f config/build.env'
                         sh 'test -f jenkins/Jenkinsfile'
+                        sh 'test -f containers/stm32mp-yocto/Dockerfile'
+                        sh 'test -x scripts/build-container-image.sh'
+                        sh 'test -x scripts/run-container-build.sh'
                     }
                 }
             }
@@ -53,33 +63,6 @@ pipeline {
             }
         }
 
-        stage('Environment validation') {
-            steps {
-                sh '''#!/usr/bin/env bash
-                    set -euo pipefail
-                    source ./config/build.env
-                    echo "Using DL_DIR=${DL_DIR}"
-                    echo "Using SSTATE_DIR=${SSTATE_DIR}"
-                    cd "$MANIFEST_DIR"
-                    if [ "${ST_AUTO_ACCEPT_EULA}" = "1" ]; then
-                        TARGET_EULA_VAR="EULA_${MACHINE//[-.]/}"
-                        export "${TARGET_EULA_VAR}=1"
-                    fi
-                    export DISTRO MACHINE FORCE_DL_CACHEPREFIX FORCE_SSTATE_CACHEPREFIX DL_DIR SSTATE_DIR
-                    set +u
-                    source layers/meta-st/scripts/envsetup.sh "$BUILD_DIR_NAME" >/dev/null
-                    set -u
-                    "$PROJECT_ROOT/scripts/configure-cache-paths.sh"
-                    "$PROJECT_ROOT/scripts/configure-bblayers.sh"
-                    test -f "$BUILDDIR/conf/local.conf"
-                    test -f "$BUILDDIR/conf/bblayers.conf"
-                    test -f "$BUILDDIR/conf/site.conf"
-                    grep -F "${DL_DIR}" "$BUILDDIR/conf/site.conf"
-                    grep -F "${SSTATE_DIR}" "$BUILDDIR/conf/site.conf"
-                '''
-            }
-        }
-
         stage('Prepare shared cache access') {
             steps {
                 sh '''#!/usr/bin/env bash
@@ -88,7 +71,41 @@ pipeline {
                     echo "Preparing Git trust for shared Yocto cache"
                     git config --global --replace-all safe.directory '*'
                     git config --global --get-all safe.directory || true
-                    mkdir -p "$DL_DIR" "$SSTATE_DIR"
+                    mkdir -p "$DL_DIR" "$SSTATE_DIR" out
+                '''
+            }
+        }
+
+        stage('Build container image') {
+            when {
+                expression { return params.BUILD_CONTAINER_IMAGE }
+            }
+            steps {
+                sh './scripts/build-container-image.sh'
+            }
+        }
+
+        stage('Verify STM32 CLI tools in container') {
+            when {
+                expression { return params.VERIFY_STM32_TOOLS }
+            }
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+                    if [ -n "${STM32CUBEPROG_DIR:-}" ] || [ -n "${STM32CUBEPROG_BUNDLE:-}" ]; then
+                        docker run --rm \
+                            --hostname ubuntu24 \
+                            -e LOCAL_UID="$(id -u)" \
+                            -e LOCAL_GID="$(id -g)" \
+                            -e LOCAL_USER="$(id -un)" \
+                            -e LOCAL_GROUP="$(id -gn)" \
+                            -e WORKSPACE_DIR=/workspace \
+                            -v "$PWD":/workspace \
+                            stm32mp-yocto-toolbox:local \
+                            ./scripts/verify-stm32-cli-tools.sh
+                    else
+                        echo "STM32CubeProgrammer content not supplied; skipping STM32 CLI verification."
+                    fi
                 '''
             }
         }
@@ -98,7 +115,7 @@ pipeline {
                 expression { return params.RUN_BUILD }
             }
             steps {
-                sh './scripts/build.sh'
+                sh './scripts/run-container-build.sh'
             }
         }
 

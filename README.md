@@ -13,8 +13,9 @@ Current target:
 - Container branch goal: reproducible STM32MP Yocto development inside Docker, with STM32CubeProgrammer-related CLI tooling integrated and verified inside the image when an official ST package is supplied
 
 Branch note:
-- `main` / current host-build branch documents the validated host-based and Jenkins-based workflow
-- `feature/containerized-st-yocto-build` focuses on validating the same ST `oe-manifest` build flow inside a portable container before any Jenkins/container integration work
+- `feature/yocto-autobuild-stm32mp135f-dk` established the validated Jenkins/autobuild workflow for this repository
+- `feature/containerized-st-yocto-build` established the validated Docker-based STM32MP Yocto build environment and STM32CubeProgrammer CLI integration path
+- `feature/jenkins-containerized-st-yocto-build` integrates both: Jenkins remains the automation entry point, but the real Yocto build now runs through the validated containerized workflow
 
 ## Purpose
 
@@ -23,7 +24,33 @@ This repository provides a clean starting point to:
 - configure the OpenSTLinux build environment
 - build a test image
 - archive build outputs
-- prepare a Jenkins-based continuous integration flow
+- run the STM32MP Yocto build inside a reproducible Docker container
+- drive that containerized build from Jenkins/autobuild
+
+## Integrated branch architecture
+
+This integrated branch combines two already validated tracks from this repository:
+
+1. Jenkins/autobuild side
+- SCM-driven Jenkins pipeline in `jenkins/Jenkinsfile`
+- local Jenkins bootstrap helper in `scripts/setup-jenkins-local-ubuntu.sh`
+- artifact archiving through `scripts/archive-artifacts.sh`
+- shared cache reuse through `DL_DIR` and `SSTATE_DIR`
+
+2. Containerized Yocto side
+- image definition in `containers/stm32mp-yocto/Dockerfile`
+- image build entry point in `scripts/build-container-image.sh`
+- normal containerized build entry point in `scripts/run-container-build.sh`
+- interactive shell entry point in `scripts/run-container-shell.sh`
+- optional STM32CubeProgrammer CLI integration through `STM32CUBEPROG_DIR` or `STM32CUBEPROG_BUNDLE`
+
+Integrated execution model on this branch:
+- Jenkins checks out the repo on the host
+- Jenkins prepares shared cache access on the host
+- Jenkins builds or refreshes the Docker image
+- Jenkins optionally verifies STM32 CLI availability inside the container image
+- Jenkins runs the real Yocto build through `./scripts/run-container-build.sh`
+- build outputs are archived from `out/`
 
 ## Repository structure
 
@@ -86,6 +113,93 @@ Known integration notes:
 - `STM32TrustedPackageCreator` is a GUI binary and is not suitable for headless verification in the container without X11/Wayland or additional Qt platform setup
 
 ## Quick start
+
+### Validated Jenkins + container workflow
+
+Use this section if your goal is the integrated solution on this branch.
+
+#### 1. Clone the repository and check out the integration branch
+
+```bash
+git clone <repo-url>
+cd yocto_deep_dive
+git checkout feature/jenkins-containerized-st-yocto-build
+```
+
+#### 2. Prepare a Jenkins host with Docker and shared Yocto cache
+
+```bash
+./scripts/setup-jenkins-local-ubuntu.sh \
+  --shared-cache-root /absolute/path/to/shared-yocto-cache
+```
+
+This prepares:
+- Jenkins service
+- Docker service and Jenkins Docker access
+- shared `downloads/` and `sstate-cache/`
+- Git trust for shared cache reuse
+
+#### 3. Build or supply the container image Jenkins will use
+
+Validated container image build entry point:
+
+```bash
+export CONTAINER_PROFILE=ubuntu2404
+./scripts/build-container-image.sh
+```
+
+If STM32CubeProgrammer CLI tools are required in the image:
+
+```bash
+export CONTAINER_PROFILE=ubuntu2404
+export STM32CUBEPROG_DIR=/home/$USER/STMicroelectronics/STM32Cube/STM32CubeProgrammer
+./scripts/build-container-image.sh
+```
+
+#### 4. Configure the Jenkins Pipeline job
+
+Use:
+- Script path: `jenkins/Jenkinsfile`
+- Branch: `*/feature/jenkins-containerized-st-yocto-build`
+
+Recommended Jenkins environment variables:
+
+```text
+SHARED_CACHE_ROOT=/absolute/path/to/shared-yocto-cache
+DL_DIR=/absolute/path/to/shared-yocto-cache/downloads
+SSTATE_DIR=/absolute/path/to/shared-yocto-cache/sstate-cache
+FORCE_DL_CACHEPREFIX=/absolute/path/to/shared-yocto-cache
+FORCE_SSTATE_CACHEPREFIX=/absolute/path/to/shared-yocto-cache
+CONTAINER_PROFILE=ubuntu2404
+```
+
+Optional when STM32 CLI tooling must be present in the Jenkins-built image:
+
+```text
+STM32CUBEPROG_DIR=/absolute/path/to/STM32CubeProgrammer
+```
+
+#### 5. Run Jenkins against the containerized flow
+
+The Jenkins entry point on this branch is:
+
+```text
+jenkins/Jenkinsfile
+```
+
+The Jenkins build stage invokes:
+
+```bash
+./scripts/run-container-build.sh
+```
+
+#### 6. Expected integrated result
+
+You should get:
+- Jenkins building through the Docker image, not through a host-only Yocto environment
+- optional STM32 CLI verification inside the container image when STM32CubeProgrammer content is supplied
+- `core-image-minimal` built inside the container
+- archived artifacts under `out/`
 
 ### Validated clean-clone container workflow
 
@@ -411,6 +525,8 @@ For more details:
 
 This repository is designed so a developer can clone it, read this README, prepare a local Jenkins host, create one Pipeline job from SCM, and run the build without editing tracked files.
 
+On this integration branch, Jenkins is the automation layer and Docker is the real Yocto execution environment. Jenkins no longer relies on the old host-only build path for the main build stage.
+
 #### 1. Clone the repository
 
 ```bash
@@ -435,8 +551,10 @@ Example:
 ```
 
 This script:
-- installs Jenkins and required host packages
+- installs Jenkins, Docker, and required host packages
 - enables and starts `jenkins.service`
+- enables and starts Docker
+- grants Jenkins Docker access
 - prepares reusable Yocto `downloads/` and `sstate-cache/`
 - grants Jenkins access to the shared cache
 - configures Jenkins Git trust for shared `downloads/git2` mirrors
@@ -471,7 +589,7 @@ Create a Jenkins Pipeline job with:
 Example branch during bring-up:
 
 ```text
-*/feature/yocto-autobuild-stm32mp135f-dk
+*/feature/jenkins-containerized-st-yocto-build
 ```
 
 #### 6. Configure cache environment variables in Jenkins
@@ -484,6 +602,7 @@ DL_DIR=/absolute/path/to/shared-yocto-cache/downloads
 SSTATE_DIR=/absolute/path/to/shared-yocto-cache/sstate-cache
 FORCE_DL_CACHEPREFIX=/absolute/path/to/shared-yocto-cache
 FORCE_SSTATE_CACHEPREFIX=/absolute/path/to/shared-yocto-cache
+CONTAINER_PROFILE=ubuntu2404
 ```
 
 Example:
@@ -499,6 +618,8 @@ FORCE_SSTATE_CACHEPREFIX=/srv/yocto-cache/shared
 #### 7. Run the Jenkins job
 
 Recommended parameters:
+- `BUILD_CONTAINER_IMAGE = true`
+- `VERIFY_STM32_TOOLS = true` when STM32CubeProgrammer content is supplied
 - `RUN_BUILD = true`
 - `ARCHIVE_OUTPUTS = true`
 
@@ -506,9 +627,10 @@ Recommended parameters:
 
 A successful Jenkins run should show:
 - manifest bootstrap succeeds
-- shared cache paths are printed
 - `Prepare shared cache access` stage runs
-- BitBake completes successfully
+- `Build container image` stage runs successfully
+- optional `Verify STM32 CLI tools in container` stage passes when STM32CubeProgrammer content is supplied
+- BitBake runs through `./scripts/run-container-build.sh`
 - artifacts are copied to `out/<timestamp>/`
 - final status is `SUCCESS`
 
@@ -564,15 +686,18 @@ Current pipeline stages:
 - Checkout
 - Host validation
 - Source bootstrap
-- Environment validation
 - Prepare shared cache access
+- Build container image
+- Verify STM32 CLI tools in container
 - Build
 - Archive outputs
 
 Jenkins implementation notes:
-- the Environment validation stage mirrors the shell wrapper behavior, including ST EULA bypass handling, temporary `nounset` disable during `envsetup.sh`, and `bblayers.conf` normalization
+- the Jenkins entry point is `jenkins/Jenkinsfile`
+- the real Yocto build entry point used by Jenkins is `./scripts/run-container-build.sh`
 - Jenkins can override cache locations through job-level environment variables without hardcoding machine-specific paths into the repository
 - the pipeline self-configures Git `safe.directory` for the Jenkins user before the build so shared Yocto `downloads/git2` mirrors can be reused without repeated manual operator fixes on a local single-user Jenkins machine
+- the pipeline assumes Docker is available on the Jenkins host and that the Jenkins user can invoke it
 - the Jenkinsfile intentionally does not enable SCM polling during bring-up; prefer manual runs now, then move to a webhook or explicit nightly schedule later
 
 ## ST EULA handling
@@ -608,6 +733,14 @@ This first implementation does not include secure-boot private keys in CI.
 Recommended approach:
 - validate unsigned builds first
 - add signing later in a separate restricted release pipeline
+
+## Limitations and troubleshooting
+
+- Jenkins must be able to run Docker on the host; this branch assumes a host-level Docker service, not Docker-in-Docker.
+- If STM32 CLI verification is enabled in Jenkins, Jenkins must receive either `STM32CUBEPROG_DIR` or `STM32CUBEPROG_BUNDLE`.
+- The validated headless trusted-package tool is `STM32TrustedPackageCreator_CLI`; the GUI binary requires display/Qt runtime support.
+- Shared cache directories must be writable by the Jenkins user and stable across builds.
+- The current pipeline model keeps source bootstrap on the host workspace and runs the real BitBake build inside the container using bind mounts.
 
 ## Additional documentation
 
