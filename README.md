@@ -10,6 +10,7 @@ Current target:
 - Host: Ubuntu
 - CI: Jenkins pipeline from SCM
 - ST EULA: auto-accepted by default for non-interactive CI builds
+- Container branch goal: reproducible STM32MP Yocto development inside Docker, with STM32CubeProgrammer-related CLI tooling integrated when an official ST package is supplied
 
 Branch note:
 - `main` / current host-build branch documents the validated host-based and Jenkins-based workflow
@@ -73,6 +74,9 @@ Known integration notes:
 - the valid machine identifier in the ST manifest is `stm32mp13-disco`; `stm32mp135f-dk` is the board name, not the Yocto `MACHINE` value used by this release
 - if an existing build directory contains a mismatched previous `DISTRO` or `MACHINE`, the wrapper archives it automatically and recreates a clean ST build directory for the requested target
 - for CI use, the wrapper can export the upstream `EULA_<machine-without-dashes-or-dots>=1` variable automatically so the ST setup does not stop on an interactive EULA prompt
+- the container image now includes `openssh-client` because ST `repo sync` may require SSH transport
+- the container entrypoint now registers the bind-mounted workspace and repo internals as Git safe directories to avoid ownership-related Git failures during `repo` usage
+- the containerized `core-image-minimal` build for `stm32mp13-disco` completed successfully on this branch
 
 ## Quick start
 
@@ -170,13 +174,68 @@ Runtime behavior of the validated path:
 - `CONTAINER_HOSTNAME` can override the hostname explicitly
 - ST `envsetup.sh` is forced non-interactive by the wrapper for reproducible container runs
 
-Upstream-aligned tooling policy for this branch:
-- the default build container does not bundle STM32CubeProgrammer
-- STM32CubeProgrammer remains an optional external host-side tool
-- generated OpenSTLinux/ST-compatible artifacts can be flashed afterwards with an external STM32CubeProgrammer install
-- signing/programming tooling is intentionally kept outside the default general-purpose build image
+STM32CubeProgrammer integration policy on this branch:
+- the image build supports optional integration of official STM32CubeProgrammer content into the container image
+- no STM32 vendor binary is committed to git by this repository
+- official STM32CubeProgrammer content must be supplied locally by the developer or CI system
+- if STM32CubeProgrammer is integrated successfully, its CLI tools are added to `PATH` under `/opt/st/STM32CubeProgrammer/bin`
+- if STM32CubeProgrammer is not supplied, the Yocto build flow still works, but STM32 programming/signing CLI tools are not present inside the image
 
-#### 4. Optional cache overrides
+#### 4. Optional STM32CubeProgrammer integration
+
+The container image can integrate STM32CubeProgrammer when you provide official ST content locally.
+
+Supported integration inputs implemented by this branch:
+- `STM32CUBEPROG_DIR`: path to an already unpacked STM32CubeProgrammer installation tree
+- `STM32CUBEPROG_BUNDLE`: path to an official STM32CubeProgrammer bundle staged on the host
+
+Current status of each path:
+- `STM32CUBEPROG_DIR`: implemented in the image build logic and intended to copy a known-good installed tree into `/opt/st/STM32CubeProgrammer`
+- `STM32CUBEPROG_BUNDLE`: implemented for bundle-based installation hooks, but the locally available official ST `.linux` installer was proven to be Java-backed and interactive by default, so unattended installation from that specific installer format is not yet proven in this branch
+
+Local vendor staging directory used by the build helper:
+
+```text
+containers/stm32mp-yocto/vendor/
+```
+
+This directory is git-ignored and intended only for local non-committed vendor assets.
+
+Example with an already unpacked install tree:
+
+```bash
+export CONTAINER_PROFILE=ubuntu2404
+export STM32CUBEPROG_DIR=/absolute/path/to/STM32CubeProgrammer
+./scripts/build-container-image.sh
+```
+
+Example with a local official bundle file:
+
+```bash
+export CONTAINER_PROFILE=ubuntu2404
+export STM32CUBEPROG_BUNDLE=/absolute/path/to/official/STM32CubeProgrammer-bundle
+./scripts/build-container-image.sh
+```
+
+License note:
+- STM32CubeProgrammer is ST-delivered software
+- this repository does not download it from unofficial sources
+- if your ST package requires an interactive installer, perform that installation once outside the image, then rebuild the container using `STM32CUBEPROG_DIR`
+
+Verification commands inside a container built with STM32CubeProgrammer content:
+
+```bash
+which STM32_Programmer_CLI
+STM32_Programmer_CLI --help
+which STM32MP_KeyGen_CLI || true
+which STM32_KeyGen_CLI || true
+which STM32MP_SigningTool_CLI || true
+which STM32_SigningTool_CLI || true
+which STM32TrustedPackageCreator || true
+which STM32TrustedPackageCreator_CLI || true
+```
+
+#### 5. Optional cache overrides
 
 ```bash
 export SHARED_CACHE_ROOT=/absolute/path/to/shared-yocto-cache
@@ -199,13 +258,18 @@ Example generated artifacts from the validated run:
 - `arm-trusted-firmware/tf-a-stm32mp135f-dk-optee-sdcard.stm32`
 - `u-boot/u-boot-stm32mp135f-dk.dtb`
 
-Optional external STM32CubeProgrammer usage after build:
+Optional host-side STM32CubeProgrammer usage after build remains available:
 
 ```bash
 ./scripts/stm32cubeprogrammer.sh --help
 ./scripts/stm32cubeprogrammer.sh list-usb
 ./scripts/stm32cubeprogrammer.sh flash-layout USB1 /absolute/path/to/FlashLayout_emmc_stm32mp13-disco_trusted.tsv
 ```
+
+Important distinction:
+- the containerized Yocto build is proven and validated on this branch
+- integrated STM32CubeProgrammer support is implemented as a reproducible local-supply mechanism
+- automatic unattended installation from the tested official ST `.linux` installer is not yet proven and remains the main open STM32 CLI integration gap
 
 For more details:
 - `docs/container-architecture.md`
