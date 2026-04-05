@@ -136,6 +136,7 @@ export STM32CUBEPROG_DIR=/home/$USER/STMicroelectronics/STM32Cube/STM32CubeProgr
 
 ```bash
 docker run --rm \
+  --hostname ubuntu24 \
   -e LOCAL_UID=$(id -u) \
   -e LOCAL_GID=$(id -g) \
   -e LOCAL_USER=$(id -un) \
@@ -146,14 +147,27 @@ docker run --rm \
   ./scripts/verify-stm32-cli-tools.sh
 ```
 
-#### 6. Run the containerized Yocto build
+#### 6. Open an interactive shell in the container
+
+```bash
+export CONTAINER_PROFILE=ubuntu2404
+./scripts/run-container-shell.sh
+```
+
+Expected prompt shape for the validated Ubuntu 24 profile:
+
+```text
+yassibeh@ubuntu24:...
+```
+
+#### 7. Run the containerized Yocto build
 
 ```bash
 export CONTAINER_PROFILE=ubuntu2404
 ./scripts/run-container-build.sh
 ```
 
-#### 7. Expected successful result
+#### 8. Expected successful result
 
 You should end with:
 - STM32 CLI verification script reporting success
@@ -254,7 +268,10 @@ export CONTAINER_PROFILE=ubuntu2404
 
 Runtime behavior of the validated path:
 - the container user mirrors the invoking host user
-- the container hostname defaults to `CONTAINER_PROFILE`
+- the container hostname defaults to an OS-aligned stable short name derived from `CONTAINER_PROFILE`
+  - `ubuntu2004` -> `ubuntu20`
+  - `ubuntu2204` -> `ubuntu22`
+  - `ubuntu2404` -> `ubuntu24`
 - `CONTAINER_HOSTNAME` can override the hostname explicitly
 - ST `envsetup.sh` is forced non-interactive by the wrapper for reproducible container runs
 
