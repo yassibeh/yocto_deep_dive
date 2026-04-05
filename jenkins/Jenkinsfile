@@ -9,10 +9,6 @@ pipeline {
         skipDefaultCheckout(true)
     }
 
-    triggers {
-        pollSCM('@hourly')
-    }
-
     parameters {
         booleanParam(name: 'BUILD_CONTAINER_IMAGE', defaultValue: true, description: 'Build or refresh the local Yocto container image before running the build')
         booleanParam(name: 'RUN_BUILD', defaultValue: true, description: 'Run the Yocto build stage inside the container')
@@ -162,9 +158,11 @@ pipeline {
     post {
         success {
             echo 'Pipeline completed successfully. Artifacts are archived from out/.'
+            echo 'This run is intended to report a green commit/PR validation status back to the SCM integration.'
         }
         failure {
             echo 'Pipeline failed. Inspect console output and archived artifacts.'
+            echo 'This run is intended to report a failing commit/PR validation status back to the SCM integration.'
         }
         always {
             script {

@@ -195,9 +195,10 @@ The Jenkins build stage invokes:
 
 Trigger model on this branch:
 - every pushed commit is intended to be validated automatically by Jenkins
-- the Jenkinsfile includes SCM polling as a default trigger baseline
-- in a production Jenkins setup, prefer SCM webhooks for push and pull-request / merge-request events so candidate integrations are validated before merge
+- pull requests must be validated automatically before integration
+- the target operating model is push-based SCM integration through GitHub webhooks and GitHub pull-request discovery, not periodic polling
 - integration policy should require a green pipeline before merging to the protected integration branch
+- the Jenkinsfile is therefore trigger-neutral; the real trigger source is the Jenkins ↔ GitHub integration configuration
 
 Implemented Jenkins stages on this branch:
 1. Checkout and workspace preparation
@@ -597,23 +598,32 @@ yocto-linux
 
 #### 5. Create the Pipeline job
 
-Create a Jenkins Pipeline job with:
-- job type: `Pipeline`
-- definition: `Pipeline script from SCM`
-- SCM: `Git`
-- repository URL: this repository
-- branch: your target branch
+Preferred production model:
+- Jenkins `Multibranch Pipeline` or GitHub Branch Source-backed pipeline
+- repository: this GitHub repository
 - script path: `jenkins/Jenkinsfile`
+- discover branches and pull requests automatically
+- webhook-driven indexing/build triggering from GitHub
 
-Example branch during bring-up:
+Minimum expected GitHub/Jenkins integration setup:
+1. install and configure the Jenkins GitHub integration / GitHub Branch Source capability
+2. create a webhook in GitHub pointing to Jenkins
+3. enable branch discovery and pull-request discovery in Jenkins
+4. ensure Jenkins reports commit status checks back to GitHub
 
-```text
-*/feature/jenkins-containerized-st-yocto-build
-```
+Protected integration branch model for this repository:
+- protected integration branch: `feature/jenkins-containerized-st-yocto-build` during bring-up, then your chosen long-lived integration branch after adoption
+- feature branches: validated automatically on push
+- pull requests targeting the protected integration branch: validated automatically before merge
+- merge rule: require the Jenkins validation check to be green before merge
+
+Fallback model if Multibranch is not available yet:
+- a classic `Pipeline script from SCM` job can still use `jenkins/Jenkinsfile`
+- but the target operating mode for this branch is webhook-driven branch/PR validation, not manual runs or periodic polling
 
 #### 6. Configure cache environment variables in Jenkins
 
-Set these either globally in Jenkins or at the job level:
+Set these either globally in Jenkins or at the multibranch folder / job level:
 
 ```text
 SHARED_CACHE_ROOT=/absolute/path/to/shared-yocto-cache
@@ -636,7 +646,13 @@ FORCE_SSTATE_CACHEPREFIX=/srv/yocto-cache/shared
 
 #### 7. Run the Jenkins job
 
-Recommended parameters:
+Expected automated behavior in the target model:
+- a push to a feature branch triggers a validation build automatically
+- a pull request targeting the protected integration branch triggers validation automatically
+- Jenkins reports build status back to GitHub
+- GitHub branch protection blocks merge when the Jenkins validation check is red or missing
+
+Recommended build parameters for the validation pipeline:
 - `BUILD_CONTAINER_IMAGE = true`
 - `VERIFY_STM32_TOOLS = true` when STM32CubeProgrammer content is supplied
 - `RUN_BUILD = true`
@@ -697,10 +713,12 @@ out/
 
 ## Jenkins usage
 
-Use a Jenkins Pipeline job configured as:
-- Pipeline from SCM
+Preferred Jenkins operating model on this branch:
+- Jenkins `Multibranch Pipeline` or equivalent GitHub-integrated job
 - repository: this repository
 - script path: `jenkins/Jenkinsfile`
+- webhook-driven branch and pull-request validation
+- GitHub status checks reported back to commits and pull requests
 
 Current pipeline stages:
 - Checkout and workspace preparation
@@ -717,11 +735,12 @@ Current pipeline stages:
 Jenkins implementation notes:
 - the Jenkins entry point is `jenkins/Jenkinsfile`
 - the real Yocto build entry point used by Jenkins is `./scripts/run-container-build.sh`
-- the default trigger model in the Jenkinsfile is SCM polling; in a production setup this should normally be replaced or complemented by push and pull-request / merge-request webhooks
+- the trigger model is intentionally externalized to Jenkins ↔ GitHub webhook integration; the Jenkinsfile itself is kept trigger-neutral
 - Jenkins can override cache locations through job-level environment variables without hardcoding machine-specific paths into the repository
 - the pipeline self-configures Git `safe.directory` for the Jenkins user before the build so shared Yocto `downloads/git2` mirrors can be reused without repeated manual operator fixes on a local single-user Jenkins machine
 - the pipeline assumes Docker is available on the Jenkins host and that the Jenkins user can invoke it
 - the pipeline archives `out/**/*` as downloadable Jenkins artifacts when the build reaches the archive stage
+- branch protection in GitHub should require the Jenkins validation check before merge to the protected integration branch
 
 Archived artifact content on this branch includes:
 - deployed Yocto image outputs from `tmp-glibc/deploy/images/${MACHINE}`
@@ -775,6 +794,8 @@ Recommended approach:
 - The validated headless trusted-package tool is `STM32TrustedPackageCreator_CLI`; the GUI binary requires display/Qt runtime support.
 - Shared cache directories must be writable by the Jenkins user and stable across builds.
 - The current pipeline model keeps source bootstrap on the host workspace and runs the real BitBake build inside the container using bind mounts.
+- True pre-integration gating requires SCM-side protection rules in GitHub in addition to Jenkins job setup; the repository alone cannot enforce merge blocking without that GitHub configuration.
+- If webhooks are not configured in GitHub or Jenkins, automatic push/PR validation will not happen even though the Jenkinsfile is ready for that model.
 
 ## Additional documentation
 
