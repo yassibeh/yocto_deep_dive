@@ -26,8 +26,33 @@ esac
 
 cd "${PROJECT_ROOT}"
 
+BUILD_ARGS=(
+    --build-arg BASE_IMAGE="${BASE_IMAGE}"
+)
+
+STAGED_VENDOR_DIR="containers/stm32mp-yocto/vendor/staged"
+rm -rf "${STAGED_VENDOR_DIR}"
+mkdir -p "${STAGED_VENDOR_DIR}"
+cleanup() {
+    rm -rf "${STAGED_VENDOR_DIR}"
+}
+trap cleanup EXIT
+
+if [ -n "${STM32CUBEPROG_BUNDLE:-}" ]; then
+    staged_bundle="${STAGED_VENDOR_DIR}/$(basename "${STM32CUBEPROG_BUNDLE}")"
+    cp -f "${STM32CUBEPROG_BUNDLE}" "${staged_bundle}"
+    BUILD_ARGS+=(--build-arg STM32CUBEPROG_BUNDLE="${staged_bundle}")
+fi
+
+if [ -n "${STM32CUBEPROG_DIR:-}" ]; then
+    staged_dir="${STAGED_VENDOR_DIR}/$(basename "${STM32CUBEPROG_DIR}")"
+    rm -rf "${staged_dir}"
+    cp -a "${STM32CUBEPROG_DIR}" "${staged_dir}"
+    BUILD_ARGS+=(--build-arg STM32CUBEPROG_DIR="${staged_dir}")
+fi
+
 docker build \
-    --build-arg BASE_IMAGE="${BASE_IMAGE}" \
+    "${BUILD_ARGS[@]}" \
     -f containers/stm32mp-yocto/Dockerfile \
     -t "${IMAGE_NAME}:${IMAGE_TAG}" \
     .

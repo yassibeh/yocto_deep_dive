@@ -8,3 +8,7 @@ cache
 *.bak-*
 **/tmp
 **/*.sock
+containers/stm32mp-yocto/vendor/
+!containers/stm32mp-yocto/vendor/.gitkeep
+!containers/stm32mp-yocto/vendor/README.md
+!containers/stm32mp-yocto/vendor/staged/**

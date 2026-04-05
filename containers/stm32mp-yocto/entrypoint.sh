@@ -73,6 +73,17 @@ fi
 RUNTIME_HOME="$(getent passwd "${RUNTIME_USER}" | cut -d: -f6)"
 mkdir -p "${WORKSPACE_DIR}" "${RUNTIME_HOME}"
 chown "${TARGET_UID}:${TARGET_GID}" "${RUNTIME_HOME}"
+
+if [ -d "${WORKSPACE_DIR}/.git" ]; then
+    su - "${RUNTIME_USER}" -c "git config --global --add safe.directory '${WORKSPACE_DIR}'" >/dev/null 2>&1 || true
+fi
+if [ -d "${WORKSPACE_DIR}/sources/.repo/repo/.git" ]; then
+    su - "${RUNTIME_USER}" -c "git config --global --add safe.directory '${WORKSPACE_DIR}/sources/.repo/repo'" >/dev/null 2>&1 || true
+fi
+if [ -d "${WORKSPACE_DIR}/sources/.repo/manifests/.git" ]; then
+    su - "${RUNTIME_USER}" -c "git config --global --add safe.directory '${WORKSPACE_DIR}/sources/.repo/manifests'" >/dev/null 2>&1 || true
+fi
+
 cd "${WORKSPACE_DIR}"
 
 if [ "$#" -eq 0 ]; then
