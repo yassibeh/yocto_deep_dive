@@ -12,6 +12,11 @@ require_cmd python3
 mkdir -p "${MANIFEST_DIR}"
 cd "${MANIFEST_DIR}"
 
+if [ -d .repo ] && [ ! -f .repo/manifest.xml ]; then
+    log "Detected corrupted .repo workspace (missing manifest.xml), reinitializing"
+    rm -rf .repo
+fi
+
 if [ ! -d .repo ]; then
     log "Initializing repo manifest ${ST_MANIFEST_TAG}"
     repo init -u "${ST_MANIFEST_URL}" -b "refs/tags/${ST_MANIFEST_TAG}"

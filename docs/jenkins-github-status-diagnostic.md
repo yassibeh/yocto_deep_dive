@@ -1,10 +1,32 @@
 # Jenkins → GitHub status reporting diagnostic
 
-## Problem
+## Status: RESOLVED
 
-Jenkins does not report build status (commit statuses or check runs) back to GitHub.
+Jenkins now reports commit statuses to GitHub. The confirmed check context is:
 
-## Evidence
+```
+continuous-integration/jenkins/branch
+```
+
+This is the exact value to use for branch protection required status checks.
+
+## Resolution evidence
+
+Commit `ec74dcf` (pushed 2026-04-06):
+- `pending` status published at `2026-04-06T10:11:13Z`
+- `error` status published at `2026-04-06T10:11:17Z` (build failed due to corrupted repo workspace, not a status reporting issue)
+- Creator: `yassibeh` (authenticated)
+- Target URL: `https://jenkins.behilil.com/job/yocto-deep-dive-ci/job/feature%252Fjenkins-containerized-st-yocto-build/9/display/redirect`
+
+## Root causes that were fixed
+
+1. **GitHub Server credential** (Manage Jenkins → System → GitHub): needed a "Secret text" credential with the PAT. Fixed first — enabled Test Connection but did not fix status publishing.
+
+2. **Branch Sources credential** (yocto-deep-dive-ci → Configure → Branch Sources): needed a "Username with password" credential (username + PAT as password). Fixed second — enabled the plugin to attempt status publishing.
+
+3. **PAT scope**: the PAT lacked `repo:status` permission. GitHub returned HTTP 403 "Resource not accessible by personal access token". Fixed third — status publishing now works.
+
+## Previous evidence (pre-fix)
 
 Tested commits:
 - `91b2364` (pushed 2026-04-05): `statuses: []`, `check_runs: []`
